@@ -14,6 +14,8 @@ class Matrix {
   public:
     Matrix();
     Matrix(unsigned rows, unsigned cols, T value = 0.0);
+    Matrix(const Matrix& m);
+    Matrix(vector<vector<T> > v);
     unsigned getCols() const;
     unsigned getRows() const;
     T get(unsigned i, unsigned j) const;
@@ -40,6 +42,20 @@ Matrix<T>::Matrix(unsigned rows, unsigned cols, T value) :
   m(rows),
   n(cols) {
   v = vector< vector<T> >(rows, vector<T>(cols, value));
+}
+
+template<class T>
+Matrix<T>::Matrix(const Matrix& o) :
+  m(o.m),
+  n(o.n),
+  v(o.v) {
+}
+
+template<class T>
+Matrix<T>::Matrix(vector<vector<T> > v) :
+  m(v.size()),
+  n(v[0].size()),
+  v(v) {
 }
 
 template<class T>

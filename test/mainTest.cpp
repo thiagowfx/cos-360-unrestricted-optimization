@@ -12,6 +12,7 @@ TEST(MatrixTest, StandardConstructor) {
   Matrix<double> m(2, 1);
   EXPECT_EQ(m.getRows(), 2);
   EXPECT_EQ(m.getCols(), 1);
+  EXPECT_THROW(m.get(1,2), std::exception);
 }
 
 TEST(MatrixTest, StandardConstructor2) {
@@ -20,6 +21,40 @@ TEST(MatrixTest, StandardConstructor2) {
   EXPECT_EQ(m.getCols(), 1);
   EXPECT_EQ(m.get(1,1), 10.0);
   EXPECT_EQ(m.get(2,1), 10.0);
+  EXPECT_THROW(m.get(1,2), std::exception);
+}
+
+TEST(MatrixTest, AliasConstructor) {
+  Matrix<double> n(2, 1, 2.0);
+  Matrix<double> m(n);
+  EXPECT_EQ(m.getRows(), 2);
+  EXPECT_EQ(m.getCols(), 1);
+  EXPECT_EQ(m.get(1,1), 2.0);
+  EXPECT_EQ(m.get(2,1), 2.0);
+  EXPECT_THROW(m.get(1,2), std::exception);
+}
+
+TEST(MatrixTest, VectorVectorConstructor) {
+  vector<vector<double> > v;
+  v.push_back(vector<double>(1, 2.0));
+  v.push_back(vector<double>(1, 2.0));
+  Matrix<double> m(v);
+  EXPECT_EQ(m.getRows(), 2);
+  EXPECT_EQ(m.getCols(), 1);
+  EXPECT_EQ(m.get(1,1), 2.0);
+  EXPECT_EQ(m.get(2,1), 2.0);
+}
+
+TEST(MatrixTest, getExceptionTest) {
+  Matrix<double> m(2,1);
+  EXPECT_THROW(m.get(1,2), std::exception);
+  EXPECT_THROW(m.get(2,2), std::exception);
+}
+
+TEST(MatrixTest, getExceptionTest2) {
+  Matrix<double> m(1,2);
+  EXPECT_THROW(m.get(2,1), std::exception);
+  EXPECT_THROW(m.get(2,2), std::exception);
 }
 
 //TEST(MatrixTest, modTest) {
