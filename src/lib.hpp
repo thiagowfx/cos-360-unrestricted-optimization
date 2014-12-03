@@ -14,11 +14,17 @@ class Matrix {
   public:
     Matrix();
     Matrix(unsigned rows, unsigned cols, T value = 0.0);
-    Matrix(const Matrix& m);
-    Matrix(vector<vector<T> > v);
+    Matrix(const Matrix&);
+    Matrix(const vector<vector<T> >& v);
     unsigned getCols() const;
     unsigned getRows() const;
     T get(unsigned i, unsigned j) const;
+    void set(unsigned i, unsigned j, T value);
+    Matrix operator+(const Matrix&) const;
+    Matrix operator-(const Matrix&) const;
+    Matrix operator*(const Matrix&) const;
+    Matrix operator*(double) const;
+    Matrix operator/(double) const; 
   private:
     /** Dimensions of the Matrix.
      * m = number of lines
@@ -52,7 +58,7 @@ Matrix<T>::Matrix(const Matrix& o) :
 }
 
 template<class T>
-Matrix<T>::Matrix(vector<vector<T> > v) :
+Matrix<T>::Matrix(const vector<vector<T> >& v) :
   m(v.size()),
   n(v[0].size()),
   v(v) {
@@ -71,6 +77,20 @@ unsigned Matrix<T>::getRows() const {
 template<class T>
 T Matrix<T>::get(unsigned i, unsigned j) const {
   return v.at(i-1).at(j-1);
+}
+
+template<class T>
+void Matrix<T>::set(unsigned i, unsigned j, T value) {
+  v.at(i-1).at(j-1) = value;
+}
+    
+template<class T>
+Matrix<T> Matrix<T>::operator+(const Matrix& o) const {
+  Matrix a(m, n);
+  for (unsigned i = 1; i <= m; ++i)
+    for (unsigned j = 1; j <= n; ++j)
+      a.set(i, j, a.get(i,j) + get(i,j));
+  return a;
 }
 
 #endif

@@ -57,6 +57,22 @@ TEST(MatrixTest, getExceptionTest2) {
   EXPECT_THROW(m.get(2,2), std::exception);
 }
 
+TEST(MatrixTest, setTest) {
+  Matrix<double> m(2,1);
+  m.set(1,1,1.0);
+  m.set(2,1,2.0);
+  EXPECT_EQ(m.get(1,1), 1.0);
+  EXPECT_EQ(m.get(2,1), 2.0);
+}
+
+TEST(MatrixTest, operatorPlusTest) {
+  Matrix<double> m(2,1, 2.0);
+  Matrix<double> n(2,1, 3.0);
+  Matrix<double> s = m + n;
+  EXPECT_DOUBLE_EQ(s.get(1,1), 5.0);
+  EXPECT_DOUBLE_EQ(s.get(2,1), 5.0);
+}
+
 //TEST(MatrixTest, modTest) {
   //vector< double > v = {3, 4};
   //Matrix m(v);

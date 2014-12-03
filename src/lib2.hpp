@@ -11,9 +11,6 @@ using namespace std;
 
 class Matrix {
   public:
-  Matrix();
-  Matrix(const Matrix& m);
-  Matrix(unsigned m, unsigned n, double value = 0.0);
   Matrix(const vector<double>&);
   Matrix(const vector< vector<double> >&);
   Matrix operator+(const Matrix&) const;
