@@ -34,6 +34,19 @@ TEST(MatrixTest, AliasConstructor) {
   EXPECT_THROW(m.get(1,2), std::exception);
 }
 
+TEST(MatrixTest, VectorConstructor) {
+  vector<double> v;
+  v.push_back(1.0);
+  v.push_back(2.0);
+  v.push_back(3.0);
+  Matrix<double> m(v);
+  EXPECT_EQ(m.getRows(), 3);
+  EXPECT_EQ(m.getCols(), 1);
+  EXPECT_DOUBLE_EQ(m.get(1,1), 1.0);
+  EXPECT_DOUBLE_EQ(m.get(2,1), 2.0);
+  EXPECT_DOUBLE_EQ(m.get(3,1), 3.0);
+}
+
 TEST(MatrixTest, VectorVectorConstructor) {
   vector<vector<double> > v;
   v.push_back(vector<double>(1, 2.0));

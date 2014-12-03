@@ -15,7 +15,8 @@ class Matrix {
     Matrix();
     Matrix(unsigned rows, unsigned cols, T value = 0.0);
     Matrix(const Matrix&);
-    Matrix(const vector<vector<T> >& v);
+    Matrix(const vector<T>&);
+    Matrix(const vector<vector<T> >&);
     unsigned getCols() const;
     unsigned getRows() const;
     T get(unsigned i) const;
@@ -66,10 +67,18 @@ Matrix<T>::Matrix(const Matrix& o) :
 }
 
 template<class T>
-Matrix<T>::Matrix(const vector<vector<T> >& v) :
-  m(v.size()),
-  n(v[0].size()),
-  v(v) {
+Matrix<T>::Matrix(const vector<T>& w) :
+  m(w.size()),
+  n(1) {
+    for (unsigned i = 0; i < w.size(); ++i)
+      v.push_back(vector<double>(1, w[i]));
+}
+
+template<class T>
+Matrix<T>::Matrix(const vector<vector<T> >& w) :
+  m(w.size()),
+  n(w[0].size()),
+  v(w) {
 }
 
 template<class T>
