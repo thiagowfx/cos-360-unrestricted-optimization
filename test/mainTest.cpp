@@ -162,10 +162,52 @@ TEST(MatrixTest, mod) {
   EXPECT_DOUBLE_EQ(m.mod(), 5.0);
 }
 
-//TEST(MatrixTest, operatorMultScalar2) {
-  //Matrix<double> m(2,1, 2.0);
-  //Matrix<double> s = 2 * m;
-  //EXPECT_DOUBLE_EQ(s.get(1,1), 4.0);
-  //EXPECT_DOUBLE_EQ(s.get(2,1), 4.0);
-//}
+TEST(MatrixTest, operatorMultMatrix) {
+  Matrix<double> a(2,2,2.0);
+  a.set(1,1,1.0);
+  Matrix<double> b(2,1,3.0);
+  b.set(1,1,4.0);
+  Matrix<double> c = a * b;
+  EXPECT_EQ(c.getRows(), 2);
+  EXPECT_EQ(c.getCols(), 1);
+  EXPECT_DOUBLE_EQ(c.get(1,1), 10.0);
+  EXPECT_DOUBLE_EQ(c.get(2,1), 14.0);
+}
+
+TEST(MatrixTest, transpose) {
+  Matrix<double> m(2,1);
+  m.set(1,1,1.0);
+  m.set(2,1,2.0);
+  Matrix<double> t = m.transpose();
+  EXPECT_EQ(t.getRows(), 1);
+  EXPECT_EQ(t.getCols(), 2);
+  EXPECT_DOUBLE_EQ(t.get(1,1), 1.0);
+  EXPECT_DOUBLE_EQ(t.get(1,2), 2.0);
+  EXPECT_THROW(t.get(2,1), std::exception);
+  EXPECT_THROW(t.get(2,2), std::exception);
+}
+
+TEST(MatrixTest, det2) {
+  Matrix<double> m(2,2,2.0);
+  m.set(2,1,3.0);
+  m.set(1,2,3.0);
+  EXPECT_DOUBLE_EQ(m.det2(), -5);
+}
+
+TEST(MatrixTest, operatorMultScalar2) {
+  Matrix<double> m(2,1, 2.0);
+  Matrix<double> s = 2 * m;
+  EXPECT_DOUBLE_EQ(s.get(1,1), 4.0);
+  EXPECT_DOUBLE_EQ(s.get(2,1), 4.0);
+}
+
+TEST(eyeTest, eyeTest) {
+  Matrix<double> m = eye<double>(2);
+  EXPECT_EQ(m.getRows(), 2);
+  EXPECT_EQ(m.getCols(), 2);
+  EXPECT_DOUBLE_EQ(m.get(1,1), 1.0);
+  EXPECT_DOUBLE_EQ(m.get(2,2), 1.0);
+  EXPECT_DOUBLE_EQ(m.get(1,2), 0.0);
+  EXPECT_DOUBLE_EQ(m.get(2,1), 0.0);
+}
 

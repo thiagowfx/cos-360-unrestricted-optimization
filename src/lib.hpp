@@ -27,13 +27,15 @@ class Matrix {
     Matrix operator*(const Matrix&) const;
     Matrix operator*(double) const;
     Matrix operator/(double) const; 
+    Matrix transpose() const;
     bool isVector() const;
+    T det2() const;
     T mod() const;
     T x1() const;
     T x2() const;
+    std::string toString() const;
     unsigned length() const;
-    // non-template friend
-    //friend Matrix<T> operator*(double, const Matrix<T>&);
+    template<class Y> friend Matrix<Y> operator*(double, const Matrix<Y>&);
   private:
     /** Dimensions of the Matrix.
      * m = number of lines
@@ -44,6 +46,14 @@ class Matrix {
     /// Internal representation of the matrix.
     vector< vector<T> > v;
 };
+
+template<class T>
+Matrix<T> eye(unsigned n) {
+  Matrix<T> w(n,n,0.0);
+  for (unsigned i = 1; i <= n; ++i)
+    w.set(i,i,1.0);
+  return w;
+}
 
 template<class T>
 Matrix<T>::Matrix() :
@@ -71,7 +81,14 @@ Matrix<T>::Matrix(const vector<T>& w) :
   m(w.size()),
   n(1) {
     for (unsigned i = 0; i < w.size(); ++i)
-      v.push_back(vector<double>(1, w[i]));
+      v.push_back(vector<T>(1, w[i]));
+}
+
+template<class T>
+T Matrix<T>::det2() const {
+  if (m != 2 && n != 2)
+    throw std::invalid_argument("Can't apply det2 to a non 2x2 matrix");
+  return get(1,1) * get(2,2) - get(1,2) * get(2,1); 
 }
 
 template<class T>
@@ -143,6 +160,15 @@ Matrix<T> Matrix<T>::operator/(double s) const {
 }
 
 template<class T>
+Matrix<T> Matrix<T>::transpose() const {
+  Matrix w(getCols(), getRows());
+  for (unsigned i = 1; i <= getRows(); ++i)
+    for (unsigned j = 1; j <= getCols(); ++j)
+      w.set(j,i,get(i,j));
+  return w;
+}
+
+template<class T>
 bool Matrix<T>::isVector() const {
   return m == 1 || n == 1;
 }
@@ -175,9 +201,49 @@ template<class T>
 unsigned Matrix<T>::length() const {
   return m * n;
 }
-//template<class T>
-//Matrix<T> operator*(double s, const Matrix<T>& o) {
-  //return o * s;
-//}
+
+template<class T>
+Matrix<T> Matrix<T>::operator*(const Matrix& o) const {
+  Matrix<T> w(getRows(), o.getCols());
+  if (getCols() != o.getRows())
+    throw std::invalid_argument("Invalid matrix multiplication");
+  for (unsigned i = 1; i <= getRows(); ++i)
+    for (unsigned j = 1; j <= o.getCols(); ++j) {
+      T sum = 0.0;
+      for (unsigned k = 1; k <= getCols(); ++k) {
+        sum += get(i,k) * o.get(k,j);
+      }
+      w.set(i,j,sum);
+    }
+  return w;
+}
+
+template<class Y>
+Matrix<Y> operator*(double s, const Matrix<Y>& o) {
+  return o * s;
+}
+
+template<class T>
+std::string Matrix<T>::toString() const {
+  std::cout << "INFO: Matrix debug" << std::endl;
+  std::cout << "\t" << "#rows=" << m << ", #cols=" << "n = " << n << std::endl;
+  for (unsigned i = 1; i <= m; ++i) {
+    std::cout << "\t";
+    for (unsigned j = 1; j <= n; ++j)
+      std::cout << get(i,j) << " ";
+    std::cout << std::endl;
+  }
+}
+
+template<class T>
+double armijo(double s, double beta, double sigma, const Matrix<T>& xk, double (*f)(Matrix<T>), Matrix<T> (*grad)(Matrix<T>), const Matrix<T>& dk) {
+  std::cout << "INFO: Armijo run" << std::endl;
+  unsigned iter = 0;
+  while (((*f)(xk + s * pow(beta, iter) * dk) - (*f)(xk)) < sigma * s * pow(beta, iter) * ((*grad)(xk) * dk.transpose()).get(1,1))
+    ++iter;
+  double param = s * pow(beta, iter);
+  std::cout << "\t#iter=" << iter+1 << ", parameter=" << param << std::endl;
+  return param;
+}
 
 #endif
