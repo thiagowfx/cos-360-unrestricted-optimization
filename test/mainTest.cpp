@@ -57,6 +57,18 @@ TEST(MatrixTest, get2) {
   EXPECT_THROW(m.get(2,2), std::exception);
 }
 
+TEST(MatrixTest, get3) {
+  Matrix<double> m(2,2);
+  m.set(1,1,1.0);
+  m.set(2,1,2.0);
+  m.set(1,2,3.0);
+  m.set(2,2,4.0);
+  EXPECT_DOUBLE_EQ(m.get(1), 1.0);
+  EXPECT_DOUBLE_EQ(m.get(2), 2.0);
+  EXPECT_DOUBLE_EQ(m.get(3), 3.0);
+  EXPECT_DOUBLE_EQ(m.get(4), 4.0);
+}
+
 TEST(MatrixTest, set) {
   Matrix<double> m(2,1);
   m.set(1,1,1.0);
@@ -117,6 +129,24 @@ TEST(MatrixTest, x1x2) {
   Matrix<double> p(2, 2);
   EXPECT_THROW(p.x1(), std::exception);
   EXPECT_THROW(p.x2(), std::exception);
+}
+
+TEST(MatrixTest, length) {
+  Matrix<double> a(1,1);
+  Matrix<double> b(2,1);
+  Matrix<double> c(1,2);
+  Matrix<double> d(2,2);
+  EXPECT_EQ(a.length(), 1);
+  EXPECT_EQ(b.length(), 2);
+  EXPECT_EQ(c.length(), 2);
+  EXPECT_EQ(d.length(), 4);
+}
+
+TEST(MatrixTest, mod) {
+  Matrix<double> m(2,1);
+  m.set(1, 1, 3.0);
+  m.set(2, 1, 4.0);
+  EXPECT_DOUBLE_EQ(m.mod(), 5.0);
 }
 
 //TEST(MatrixTest, operatorMultScalar2) {

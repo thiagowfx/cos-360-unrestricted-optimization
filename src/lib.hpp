@@ -18,6 +18,7 @@ class Matrix {
     Matrix(const vector<vector<T> >& v);
     unsigned getCols() const;
     unsigned getRows() const;
+    T get(unsigned i) const;
     T get(unsigned i, unsigned j) const;
     void set(unsigned i, unsigned j, T value);
     Matrix operator+(const Matrix&) const;
@@ -26,8 +27,10 @@ class Matrix {
     Matrix operator*(double) const;
     Matrix operator/(double) const; 
     bool isVector() const;
+    T mod() const;
     T x1() const;
     T x2() const;
+    unsigned length() const;
     // non-template friend
     //friend Matrix<T> operator*(double, const Matrix<T>&);
   private:
@@ -77,6 +80,11 @@ unsigned Matrix<T>::getCols() const {
 template<class T>
 unsigned Matrix<T>::getRows() const {
   return m;
+}
+
+template<class T>
+T Matrix<T>::get(unsigned i) const {
+  return v.at((i - 1) % m).at((i-1) / m);
 }
 
 template<class T>
@@ -131,6 +139,14 @@ bool Matrix<T>::isVector() const {
 }
 
 template<class T>
+T Matrix<T>::mod() const {
+  T sum = 0.0;
+  for (unsigned i = 1; i <= length(); ++i)
+    sum += get(i) * get(i);
+  return sqrt(sum);
+}
+
+template<class T>
 T Matrix<T>::x1() const {
   if (m == 2 && n == 1)
     return get(1,1);  
@@ -144,6 +160,11 @@ T Matrix<T>::x2() const {
     return get(2,1);  
   else
     throw std::invalid_argument("Not a (2,1) column vector");
+}
+
+template<class T>
+unsigned Matrix<T>::length() const {
+  return m * n;
 }
 //template<class T>
 //Matrix<T> operator*(double s, const Matrix<T>& o) {
