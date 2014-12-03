@@ -25,6 +25,11 @@ class Matrix {
     Matrix operator*(const Matrix&) const;
     Matrix operator*(double) const;
     Matrix operator/(double) const; 
+    bool isVector() const;
+    T x1() const;
+    T x2() const;
+    // non-template friend
+    //friend Matrix<T> operator*(double, const Matrix<T>&);
   private:
     /** Dimensions of the Matrix.
      * m = number of lines
@@ -86,11 +91,63 @@ void Matrix<T>::set(unsigned i, unsigned j, T value) {
     
 template<class T>
 Matrix<T> Matrix<T>::operator+(const Matrix& o) const {
-  Matrix a(m, n);
+  Matrix<T> a(m, n);
   for (unsigned i = 1; i <= m; ++i)
     for (unsigned j = 1; j <= n; ++j)
-      a.set(i, j, a.get(i,j) + get(i,j));
+      a.set(i, j, get(i,j) + o.get(i,j));
   return a;
 }
+
+template<class T>
+Matrix<T> Matrix<T>::operator-(const Matrix& o) const {
+  Matrix<T> a(m, n);
+  for (unsigned i = 1; i <= m; ++i)
+    for (unsigned j = 1; j <= n; ++j)
+      a.set(i, j, get(i,j) - o.get(i,j));
+  return a;
+}
+
+template<class T>
+Matrix<T> Matrix<T>::operator*(double s) const {
+  Matrix<T> a(m, n);
+  for (unsigned i = 1; i <= m; ++i)
+    for (unsigned j = 1; j <= n; ++j)
+      a.set(i, j, s * get(i,j));
+  return a;
+}
+
+template<class T>
+Matrix<T> Matrix<T>::operator/(double s) const {
+  Matrix<T> a(m, n);
+  for (unsigned i = 1; i <= m; ++i)
+    for (unsigned j = 1; j <= n; ++j)
+      a.set(i, j, s / get(i,j));
+  return a;
+}
+
+template<class T>
+bool Matrix<T>::isVector() const {
+  return m == 1 || n == 1;
+}
+
+template<class T>
+T Matrix<T>::x1() const {
+  if (m == 2 && n == 1)
+    return get(1,1);  
+  else
+    throw std::invalid_argument("Not a (2,1) column vector");
+}
+
+template<class T>
+T Matrix<T>::x2() const {
+  if (m == 2 && n == 1)
+    return get(2,1);  
+  else
+    throw std::invalid_argument("Not a (2,1) column vector");
+}
+//template<class T>
+//Matrix<T> operator*(double s, const Matrix<T>& o) {
+  //return o * s;
+//}
 
 #endif

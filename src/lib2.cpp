@@ -36,6 +36,7 @@ Matrix::Matrix(const vector< vector<double> >& o) :
 Matrix Matrix::operator+(const Matrix& o) const {
   if (!(m == o.m && n == o.n))
     throw std::invalid_argument("matrices should have the same dimensions for this operation");
+
   Matrix w(m, n);
   for (unsigned i = 0; i < m; ++i)
     for(unsigned j = 0; j < n; ++j)
