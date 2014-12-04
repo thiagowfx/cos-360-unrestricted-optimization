@@ -32,11 +32,14 @@ class Matrix {
     /// Return the number of rows of this matrix.
     unsigned getRows() const;
 
-    /// Get the value of the ith element. Row-major.
+    /// Get the value of the ith element. Column-major.
     double get(unsigned i) const;
 
     /// Get the value of the Aij element.
     double get(unsigned i, unsigned j) const;
+
+    /// Set the value of the ith element. Column-major.
+    void set(unsigned i, double value);
 
     /// Set Aij to value.
     void set(unsigned i, unsigned j, double value);
@@ -144,6 +147,10 @@ unsigned Matrix::getRows() const {
 
 double Matrix::get(unsigned i) const {
   return v.at((i - 1) % m).at((i-1) / m);
+}
+
+void Matrix::set(unsigned i, double value) {
+  v.at((i - 1) % m).at((i-1) / m) = value;
 }
 
 double Matrix::get(unsigned i, unsigned j) const {
@@ -264,14 +271,88 @@ void Matrix::debug() const {
   }
 }
 
-double armijo(double s, double beta, double sigma, const Matrix& xk, double (*f)(Matrix), Matrix (*grad)(Matrix), const Matrix& dk) {
-  std::cout << "INFO: Armijo run" << std::endl;
+double fa(Matrix x) {
+  return (x.x1() * x.x1()) + pow(exp(x.x1()) - x.x2(), 2);
+}
+
+/**
+ * Regra de Armijo.
+ * Encontrar um t = sb^m tal que
+ * f(x + sb^m d) - f(x) <= o sb^m gradf(x)' d ==>
+ * f(x + td) - f(x) <= o t gradf(x)' d
+ *
+ * Constraints:
+ *    m >= 0
+ *    0 < o < 1 (sigma)
+ *    0 < b < 1 (beta)
+ *    0 << t < 1 (bs^m)
+ */
+// TOTEST.
+double armijo_call(
+    double s,
+    double beta,              // 0 < b < 1
+    double sigma,             // 0 < o < 1
+    double (*f)(Matrix),
+    Matrix (*gradf)(Matrix),
+    const Matrix& x,
+    const Matrix& d
+    ) 
+{
+  std::cout << "INFO: armijo_call run" << std::endl;
+
+  // Skipping right through the test means 1 iteration.
   unsigned iter = 0;
-  while (((*f)(xk + s * pow(beta, iter) * dk) - (*f)(xk)) < sigma * s * pow(beta, iter) * (((*grad)(xk)).transpose() * dk).get(1,1))
+
+  while (true) {
+    if ( ((*f)(x) - (*f)(x + s * pow(beta, iter) * d)) >= -sigma * s * pow(beta, iter) * (((*gradf)(x)).t() * d).x() )
+      break;
+
     ++iter;
-  double param = s * pow(beta, iter);
-  std::cout << "\t#iter=" << iter+1 << ", parameter=" << param << std::endl;
-  return param;
+  }
+
+  double t = s * pow(beta, iter);
+  std::cout << "\t#iter=" << iter+1 << ", t=" << t << std::endl;
+  return t;
+}
+
+Matrix gradient_method(
+    double (*f)(Matrix),
+    Matrix (*gradf)(Matrix),
+    Matrix x0,
+    double epsilon
+    )
+{
+  std::cout << "INFO: gradient_method run" << std::endl;
+  std::cout << "\t" << "initial point: " << "(" << x0.x1() << ", " << x0.x2() << ")" << std::endl;
+  std::cout << "\t" << "epsilon: " << epsilon << std::endl;
+
+  Matrix dk;                  // descida (o gradiente)
+  Matrix xk = x0;             // x atual
+  Matrix xnext;               // Pŕoximo x (computado a cada iteração).
+  unsigned iter = 0;          // Iteração
+  unsigned n_call_armijo = 0; // Número de chamadas de Armijo.
+
+  while(true) {
+    // Critério de parada.
+    if (((*gradf)(xk)).mod() < epsilon) 
+      break;
+    ++iter;
+
+    dk = (-1) * (*gradf)(xk);
+
+    double ak = armijo_call(0.8, 0.8, 0.8, f, gradf, xk, dk);
+    ++n_call_armijo;
+
+    xnext = xk + ak * dk;
+    xk = xnext;
+  }
+
+  std::cout << "\t" << "n_iterations: " << iter + 1 << std::endl;
+  std::cout << "\t" << "n_call_armijo: " << n_call_armijo << std::endl;
+  std::cout << "\t" << "optimal point: " << "(" << xk.x1() << ", " << xk.x2() << ")" << std::endl;
+  std::cout << "\t" << "optimal value: " << (*f)(xk) << std::endl;
+
+  return xk;
 }
 
 #endif

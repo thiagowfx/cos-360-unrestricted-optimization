@@ -84,6 +84,27 @@ TEST(MatrixTest, get3) {
 
 TEST(MatrixTest, set) {
   Matrix m(2,1);
+  m.set(1,1.0);
+  m.set(2,2.0);
+  EXPECT_DOUBLE_EQ(m.get(1,1), 1.0);
+  EXPECT_DOUBLE_EQ(m.get(2,1), 2.0);
+  EXPECT_THROW(m.set(3,3.0), std::exception);
+}
+
+TEST(MatrixTest, set2) {
+  Matrix m(2,2);
+  m.set(1,1.0);
+  m.set(2,2.0);
+  m.set(3,3.0);
+  m.set(4,4.0);
+  EXPECT_DOUBLE_EQ(m.get(1), 1.0);
+  EXPECT_DOUBLE_EQ(m.get(2), 2.0);
+  EXPECT_DOUBLE_EQ(m.get(3), 3.0);
+  EXPECT_DOUBLE_EQ(m.get(4), 4.0);
+}
+
+TEST(MatrixTest, set3) {
+  Matrix m(2,1);
   m.set(1,1,1.0);
   m.set(2,1,2.0);
   EXPECT_EQ(m.get(1,1), 1.0);
@@ -236,3 +257,25 @@ TEST(eyeTest, eyeTest) {
   EXPECT_DOUBLE_EQ(m.get(2,1), 0.0);
 }
 
+TEST(faTest, values) {
+  Matrix a1(2,1, 0.0);
+  EXPECT_DOUBLE_EQ(fa(a1), 1.0);
+
+  Matrix a2(2,1);
+  a2.set(1,1,2.0);
+  a2.set(2,1,1.0);
+  EXPECT_DOUBLE_EQ(fa(a2), 4 + pow(exp(2)-1,2));
+
+  Matrix a3(2,1);
+  a3.set(1,1,0.0);
+  a3.set(2,1,2.0);
+  EXPECT_DOUBLE_EQ(fa(a3), 1);
+
+  Matrix a4(2,1);
+  a4.set(1,1,0.0);
+  a4.set(2,1,2.0);
+  EXPECT_DOUBLE_EQ(fa(a4), 1);
+
+  Matrix a5(2,1,1.0);
+  EXPECT_DOUBLE_EQ(fa(a5), 1 + pow(exp(1) - 1, 2));
+}

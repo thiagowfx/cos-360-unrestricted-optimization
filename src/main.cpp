@@ -1,9 +1,8 @@
 #include "lib.hpp"
 using namespace std;
 
-int main() {
-  Matrix m(2,2,1.0);
-  m.set(2,1,2.0);
+int main(int argc, char **argv) {
+  Matrix m(2,1,3.0);
   m.debug();
 
   return 0;
