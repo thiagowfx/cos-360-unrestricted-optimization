@@ -61,6 +61,9 @@ class Matrix {
     /// If this is a vector, return its module.
     double mod() const;
 
+    /// If this is a 1x1 vector, return its only element.
+    double x() const;
+
     /// If this is a 2x1 vector, return its first element.
     double x1() const;
 
@@ -68,10 +71,11 @@ class Matrix {
     double x2() const;
 
     /// Return a string representation of this matrix.
-    std::string toString() const;
+    void debug() const;
 
     /// Return the number of elements of this matrix.
     unsigned length() const;
+
   private:
     /** Dimensions of the Matrix.
      * m = number of lines
@@ -198,18 +202,25 @@ double Matrix::mod() const {
   return sqrt(sum);
 }
 
+double Matrix::x() const {
+  if (m == 1 && n == 1)
+    return get(1,1);
+  else
+    throw std::invalid_argument("Not a 1x1 Matrix");
+}
+
 double Matrix::x1() const {
   if (m == 2 && n == 1)
     return get(1,1);  
   else
-    throw std::invalid_argument("Not a (2,1) column vector");
+    throw std::invalid_argument("Not a 2x1 column vector");
 }
 
 double Matrix::x2() const {
   if (m == 2 && n == 1)
     return get(2,1);  
   else
-    throw std::invalid_argument("Not a (2,1) column vector");
+    throw std::invalid_argument("Not a 2x1 column vector");
 }
 
 unsigned Matrix::length() const {
@@ -235,9 +246,9 @@ Matrix operator*(double s, const Matrix& o) {
   return o * s;
 }
 
-std::string Matrix::toString() const {
+void Matrix::debug() const {
   std::cout << "INFO: Matrix debug" << std::endl;
-  std::cout << "\t" << "#rows=" << m << ", #cols=" << "n = " << n << std::endl;
+  std::cout << "\t" << "#rows=" << m << ", #cols=" <<  n << std::endl;
   for (unsigned i = 1; i <= m; ++i) {
     std::cout << "\t";
     for (unsigned j = 1; j <= n; ++j)

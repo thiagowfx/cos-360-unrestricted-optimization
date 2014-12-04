@@ -126,6 +126,18 @@ TEST(MatrixTest, isVector) {
   EXPECT_FALSE(d.isVector());
 }
 
+TEST(MatrixTest, x) {
+  Matrix m(1,1,4.0);
+  EXPECT_DOUBLE_EQ(m.x(), 4.0);
+
+  Matrix n(2,1);
+  Matrix o(1,2);
+  Matrix p(2,2);
+  EXPECT_THROW(n.x(), std::exception);
+  EXPECT_THROW(o.x(), std::exception);
+  EXPECT_THROW(p.x(), std::exception);
+}
+
 TEST(MatrixTest, x1x2) {
   Matrix m(2, 1, 3.0);
   EXPECT_DOUBLE_EQ(m.x1(), 3.0);
