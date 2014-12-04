@@ -282,16 +282,29 @@ void Matrix::debug() const {
  * Retorna o tempo em segundos.
  */
 class Timer {
-public:
+  public:
     Timer() { clock_gettime(CLOCK_REALTIME, &beg_); }
     double elapsed() {
-        clock_gettime(CLOCK_REALTIME, &end_);
-        return end_.tv_sec - beg_.tv_sec +
-            (end_.tv_nsec - beg_.tv_nsec) / 1000000000.;
+      clock_gettime(CLOCK_REALTIME, &end_);
+      return end_.tv_sec - beg_.tv_sec +
+        (end_.tv_nsec - beg_.tv_nsec) / 1000000000.;
     }
     void reset() { clock_gettime(CLOCK_REALTIME, &beg_); }
-private:
+  private:
     timespec beg_, end_;
+};
+
+/// Retorna um inteiro aleatório entre -limit e +limit (não-incluso).
+int rand_int(unsigned limit) { 
+  int signal = ((rand() % 2) == 0) ? (-1) : (+1);
+  return signal * (rand() % limit); 
+};
+
+/// Retorna um número aleatório entre -limit e +limit.
+int rand_double(unsigned limit) {
+  int signal = ((rand() % 2) == 0) ? (-1) : (+1);
+  double decimals = (rand() % 1000) / 1000.0;
+  return signal * ((rand() % limit) + decimals); 
 };
 
 /// fa
@@ -363,6 +376,31 @@ Matrix gradd(Matrix x, Matrix xkk) {
 }
 
 /**
+ * g do subproblema
+ * g = f + (lambdak / 2) * d
+ */
+double g(
+    double (*f)(Matrix),
+    double lambdak,
+    Matrix x,
+    Matrix xkk
+    )
+{
+  return (*f)(x) + ((lambdak/2.0) * d(x,xkk));
+}
+
+/// gradiente de g
+Matrix gradg(
+    Matrix (*gradf)(Matrix),
+    double lambdak,
+    Matrix x,
+    Matrix xkk
+    )
+{
+  return (*gradf)(x) + ((lambdak/2.0) * gradd(x,xkk));
+}
+
+/**
  * Regra de Armijo.
  * Encontrar um t = sb^m tal que
  * f(x + sb^m d) - f(x) <= o sb^m gradf(x)' d ==>
@@ -374,7 +412,6 @@ Matrix gradd(Matrix x, Matrix xkk) {
  *    0 < b < 1 (beta)
  *    0 << t < 1 (bs^m)
  */
-// TOTEST.
 double armijo_call(
     double s,
     double beta,              // 0 < b < 1
@@ -383,8 +420,7 @@ double armijo_call(
     Matrix (*gradf)(Matrix),
     const Matrix& x,
     const Matrix& d
-    ) 
-{
+    ) {
   std::cout << "\t" << "INFO: armijo_call run" << std::endl;
 
   // Skipping right through the test means 1 iteration.
@@ -407,13 +443,13 @@ Matrix gradient_method(
     Matrix (*gradf)(Matrix),
     Matrix x0,
     double epsilon
-    )
-{
-  Timer timer;
+    ) {
   std::cout << "INFO: gradient_method run" << std::endl;
+  std::cout << "initial point: " << "(" << x0.x1() << ", " << x0.x2() << ")" << std::endl;
+
+  Timer timer;
   Matrix dk;                  // descida (o gradiente)
   Matrix xk = x0;             // x atual
-  Matrix xnext;               // Pŕoximo x (computado a cada iteração).
   unsigned iter = 0;          // Iteração
   unsigned n_call_armijo = 0; // Número de chamadas de Armijo.
 
@@ -428,13 +464,12 @@ Matrix gradient_method(
     double ak = armijo_call(0.8, 0.8, 0.8, f, gradf, xk, dk);
     ++n_call_armijo;
 
-    xnext = xk + ak * dk;
-    xk = xnext;
+    // Atualização do xk.
+    xk = xk + ak * dk;
 
     std::cout << "\tINFO: gradient_method iter" << std::endl;
     std::cout << "\t\t" << "dk: " << "(" << dk.x1() << ", " << dk.x2() << ")" << std::endl;
-    std::cout << "\t\t" << "xnext: " << "(" << xnext.x1() << ", " << xnext.x2() << ")" << std::endl;
-
+    std::cout << "\t\t" << "xk: " << "(" << xk.x1() << ", " << xk.x2() << ")" << std::endl;
   }
 
   std::cout << "\t" << "elapsed time:" << timer.elapsed() << "s" << std::endl;
@@ -446,6 +481,66 @@ Matrix gradient_method(
   std::cout << "\t" << "optimal value: " << (*f)(xk) << std::endl;
 
   return xk;
+}
+
+Matrix newton_method(
+    double (*f)(Matrix),
+    Matrix (*gradf)(Matrix),
+    Matrix (*invhessf)(Matrix),
+    Matrix x0,
+    double epsilon
+    ) {
+  std::cout << "INFO: newton_method run" << std::endl;
+  std::cout << "initial point: " << "(" << x0.x1() << ", " << x0.x2() << ")" << std::endl;
+
+  Timer timer;
+  Matrix dk;
+  Matrix xk = x0;
+  unsigned iter = 0;
+  unsigned n_call_armijo = 0;
+
+  while(true) {
+    // Critério de parada.
+    if (((*gradf)(xk)).mod() < epsilon)
+      break;
+    ++iter;
+
+    dk = (-1) * (*invhessf)(xk) * (*gradf)(xk);
+
+    double ak = armijo_call(0.8, 0.8, 0.8, f, gradf, xk, dk);
+    ++n_call_armijo;
+
+    // Atualização do xk.
+    xk = xk + ak * dk;
+
+    std::cout << "\tINFO: newton_method iter" << std::endl;
+    std::cout << "\t\t" << "dk: " << "(" << dk.x1() << ", " << dk.x2() << ")" << std::endl;
+    std::cout << "\t\t" << "xk: " << "(" << xk.x1() << ", " << xk.x2() << ")" << std::endl;
+  }
+
+  std::cout << "\t" << "elapsed time:" << timer.elapsed() << "s" << std::endl;
+  std::cout << "\t" << "initial point: " << "(" << x0.x1() << ", " << x0.x2() << ")" << std::endl;
+  std::cout << "\t" << "epsilon: " << epsilon << std::endl;
+  std::cout << "\t" << "n_iterations: " << iter + 1 << std::endl;
+  std::cout << "\t" << "n_call_armijo: " << n_call_armijo << std::endl;
+  std::cout << "\t" << "optimal point: " << "(" << xk.x1() << ", " << xk.x2() << ")" << std::endl;
+  std::cout << "\t" << "optimal value: " << (*f)(xk) << std::endl;
+
+  return xk;
+}
+
+typedef enum Posto {POSTO1, POSTO2} Posto;
+
+Matrix quasinewton_method(
+    double (*f)(Matrix),
+    Matrix (*gradf)(Matrix),
+    Matrix x0,
+    Matrix B0,
+    Posto posto,
+    double epsilon
+    ) {
+  // TODO.
+  return Matrix();
 }
 
 #endif
