@@ -279,3 +279,67 @@ TEST(faTest, values) {
   Matrix a5(2,1,1.0);
   EXPECT_DOUBLE_EQ(fa(a5), 1 + pow(exp(1) - 1, 2));
 }
+
+TEST(gradfaTest, values) {
+  Matrix a1(2,1);
+  EXPECT_DOUBLE_EQ((gradfa(a1)).x1(), 2.0);
+  EXPECT_DOUBLE_EQ((gradfa(a1)).x2(), -2.0);
+
+  Matrix a2(2,1);
+  a2.set(1, 0.0);
+  a2.set(2, 1.0);
+  EXPECT_DOUBLE_EQ(gradfa(a2).x1(), 0.0);
+  EXPECT_DOUBLE_EQ(gradfa(a2).x2(), 0.0);
+}
+
+TEST(fbTest, values) {
+  Matrix a1(2,1, 0.0);
+  EXPECT_DOUBLE_EQ(fb(a1), 1.0);
+
+  Matrix a2(2,1);
+  a2.set(1,1,2.0);
+  a2.set(2,1,1.0);
+  EXPECT_DOUBLE_EQ(fb(a2), sqrt(4 + pow(exp(2)-1,2.0)));
+
+  Matrix a3(2,1);
+  a3.set(1,1,0.0);
+  a3.set(2,1,2.0);
+  EXPECT_DOUBLE_EQ(fb(a3), 1.0);
+
+  Matrix a4(2,1);
+  a4.set(1,1,0.0);
+  a4.set(2,1,2.0);
+  EXPECT_DOUBLE_EQ(fb(a4), 1.0);
+
+  Matrix a5(2,1,1.0);
+  EXPECT_DOUBLE_EQ(fb(a5), sqrt(1 + pow(exp(1) - 1, 2.0)));
+}
+
+TEST(gradfbTest, values) {
+  Matrix a1(2,1);
+  EXPECT_DOUBLE_EQ(gradfb(a1).x1(), 1.0);
+  EXPECT_DOUBLE_EQ(gradfb(a1).x2(), -1.0);
+}
+
+TEST(fcTest, values) {
+  Matrix a1(2,1, 0.0);
+  EXPECT_DOUBLE_EQ(fc(a1), log(2.0));
+
+  Matrix a2(2,1);
+  a2.set(1,1,2.0);
+  a2.set(2,1,1.0);
+  EXPECT_DOUBLE_EQ(fc(a2), log(5 + pow(exp(2)-1,2.0)));
+
+  Matrix a3(2,1);
+  a3.set(1,1,0.0);
+  a3.set(2,1,2.0);
+  EXPECT_DOUBLE_EQ(fc(a3), log(2.0));
+
+  Matrix a4(2,1);
+  a4.set(1,1,0.0);
+  a4.set(2,1,2.0);
+  EXPECT_DOUBLE_EQ(fc(a4), log(2.0));
+
+  Matrix a5(2,1,1.0);
+  EXPECT_DOUBLE_EQ(fc(a5), log(2 + pow(exp(1) - 1, 2.0)));
+}

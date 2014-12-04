@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
+#include <ctime>
 #include <iostream>
 #include <stdexcept>
 #include <vector>
@@ -275,6 +277,43 @@ double fa(Matrix x) {
   return (x.x1() * x.x1()) + pow(exp(x.x1()) - x.x2(), 2);
 }
 
+Matrix gradfa(Matrix x) {
+  Matrix w(2,1);
+  const double x1 = x.x1();
+  const double x2 = x.x2();
+  w.set(1, (2 * x1)   +   2 * ( exp(x1) - x2 ) * exp(x1)   );
+  w.set(2,                2 * ( exp(x1) - x2 ) * (-1)   );
+  return w;
+}
+
+double fb(Matrix x) {
+  return sqrt(fa(x));
+}
+
+Matrix gradfb(Matrix x) {
+  Matrix w(2,1);
+  w.set(1, (1.0/(2 * fb(x))) * gradfa(x).x1() );
+  w.set(2, (1.0/(2 * fb(x))) * gradfa(x).x2() );
+  return w;
+}
+
+double fc(Matrix x) {
+  return log(1 + fa(x));
+}
+
+class Timer {
+public:
+    Timer() { clock_gettime(CLOCK_REALTIME, &beg_); }
+    double elapsed() {
+        clock_gettime(CLOCK_REALTIME, &end_);
+        return end_.tv_sec - beg_.tv_sec +
+            (end_.tv_nsec - beg_.tv_nsec) / 1000000000.;
+    }
+    void reset() { clock_gettime(CLOCK_REALTIME, &beg_); }
+private:
+    timespec beg_, end_;
+};
+
 /**
  * Regra de Armijo.
  * Encontrar um t = sb^m tal que
@@ -298,7 +337,7 @@ double armijo_call(
     const Matrix& d
     ) 
 {
-  std::cout << "INFO: armijo_call run" << std::endl;
+  std::cout << "\t" << "INFO: armijo_call run" << std::endl;
 
   // Skipping right through the test means 1 iteration.
   unsigned iter = 0;
@@ -311,7 +350,7 @@ double armijo_call(
   }
 
   double t = s * pow(beta, iter);
-  std::cout << "\t#iter=" << iter+1 << ", t=" << t << std::endl;
+  std::cout << "\t\t" << "#iter=" << iter+1 << ", t=" << t << std::endl;
   return t;
 }
 
@@ -322,10 +361,8 @@ Matrix gradient_method(
     double epsilon
     )
 {
+  Timer timer;
   std::cout << "INFO: gradient_method run" << std::endl;
-  std::cout << "\t" << "initial point: " << "(" << x0.x1() << ", " << x0.x2() << ")" << std::endl;
-  std::cout << "\t" << "epsilon: " << epsilon << std::endl;
-
   Matrix dk;                  // descida (o gradiente)
   Matrix xk = x0;             // x atual
   Matrix xnext;               // Pŕoximo x (computado a cada iteração).
@@ -345,8 +382,16 @@ Matrix gradient_method(
 
     xnext = xk + ak * dk;
     xk = xnext;
+
+    std::cout << "\tINFO: gradient_method iter" << std::endl;
+    std::cout << "\t\t" << "dk: " << "(" << dk.x1() << ", " << dk.x2() << ")" << std::endl;
+    std::cout << "\t\t" << "xnext: " << "(" << xnext.x1() << ", " << xnext.x2() << ")" << std::endl;
+
   }
 
+  std::cout << "\t" << "elapsed time:" << timer.elapsed() << "s" << std::endl;
+  std::cout << "\t" << "initial point: " << "(" << x0.x1() << ", " << x0.x2() << ")" << std::endl;
+  std::cout << "\t" << "epsilon: " << epsilon << std::endl;
   std::cout << "\t" << "n_iterations: " << iter + 1 << std::endl;
   std::cout << "\t" << "n_call_armijo: " << n_call_armijo << std::endl;
   std::cout << "\t" << "optimal point: " << "(" << xk.x1() << ", " << xk.x2() << ")" << std::endl;
