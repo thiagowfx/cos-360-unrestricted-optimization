@@ -343,3 +343,9 @@ TEST(fcTest, values) {
   Matrix a5(2,1,1.0);
   EXPECT_DOUBLE_EQ(fc(a5), log(2 + pow(exp(1) - 1, 2.0)));
 }
+
+TEST(gradfcTest, values) {
+  Matrix a1(2,1);
+  EXPECT_DOUBLE_EQ(gradfc(a1).x1(), (1.0/log(2.0)) * 2); 
+  EXPECT_DOUBLE_EQ(gradfc(a1).x2(), (1.0/log(2.0)) * (-2));
+}

@@ -273,34 +273,14 @@ void Matrix::debug() const {
   }
 }
 
-double fa(Matrix x) {
-  return (x.x1() * x.x1()) + pow(exp(x.x1()) - x.x2(), 2);
-}
-
-Matrix gradfa(Matrix x) {
-  Matrix w(2,1);
-  const double x1 = x.x1();
-  const double x2 = x.x2();
-  w.set(1, (2 * x1)   +   2 * ( exp(x1) - x2 ) * exp(x1)   );
-  w.set(2,                2 * ( exp(x1) - x2 ) * (-1)   );
-  return w;
-}
-
-double fb(Matrix x) {
-  return sqrt(fa(x));
-}
-
-Matrix gradfb(Matrix x) {
-  Matrix w(2,1);
-  w.set(1, (1.0/(2 * fb(x))) * gradfa(x).x1() );
-  w.set(2, (1.0/(2 * fb(x))) * gradfa(x).x2() );
-  return w;
-}
-
-double fc(Matrix x) {
-  return log(1 + fa(x));
-}
-
+/**
+ * Classe para contar o tempo de um método. 
+ * Como usar: 
+ *    Timer timer;
+ *    <rotina demorada>;
+ *    timer.elapsed();
+ * Retorna o tempo em segundos.
+ */
 class Timer {
 public:
     Timer() { clock_gettime(CLOCK_REALTIME, &beg_); }
@@ -313,6 +293,74 @@ public:
 private:
     timespec beg_, end_;
 };
+
+/// fa
+double fa(Matrix x) {
+  return pow(x.x1(), 2) + pow(exp(x.x1()) - x.x2(), 2.0);
+}
+
+/// gradiente de fa
+Matrix gradfa(Matrix x) {
+  Matrix w(2,1);
+  const double x1 = x.x1();
+  const double x2 = x.x2();
+  w.set(1, (2 * x1)   +   2 * ( exp(x1) - x2 ) * exp(x1)   );
+  w.set(2,                2 * ( exp(x1) - x2 ) * (-1)   );
+  return w;
+}
+
+/// fb
+double fb(Matrix x) {
+  return sqrt(fa(x));
+}
+
+/// gradiente de fb
+Matrix gradfb(Matrix x) {
+  Matrix w(2,1);
+  w.set(1, (1.0/(2 * fb(x))) * gradfa(x).x1() );
+  w.set(2, (1.0/(2 * fb(x))) * gradfa(x).x2() );
+  return w;
+}
+
+/// fc
+double fc(Matrix x) {
+  return log(1 + fa(x));
+}
+
+/// gradiente de fc
+Matrix gradfc(Matrix x) {
+  Matrix w(2,1);
+  w.set(1, (1.0/fc(x)) * gradfa(x).x1() );
+  w.set(2, (1.0/fc(x)) * gradfa(x).x2() );
+  return w;
+}
+
+/**
+ * d do subproblema.
+ * x: a variável
+ * xkk: o ponto anterior
+ */
+double d(Matrix x, Matrix xkk) {
+  return
+    pow( x.x1() - xkk.x1(), 2.0) +
+    pow((x.x2() - xkk.x2()) - (exp(x.x1()) - exp(xkk.x1())), 2.0);
+}
+
+/// gradiente de d
+Matrix gradd(Matrix x, Matrix xkk) {
+  Matrix w(2,1);
+
+  w.set(1,
+      2 * (x.x1() - xkk.x1()) +
+      2 * (-exp(x.x1())) * ((x.x2() - xkk.x2()) - (exp(x.x1()) - exp(xkk.x1())))
+      );
+
+  w.set(2,
+      2 * ((x.x2() - xkk.x2()) - (exp(x.x1()) - exp(xkk.x1())))
+      );
+
+  return w;
+}
 
 /**
  * Regra de Armijo.
