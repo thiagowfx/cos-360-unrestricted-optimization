@@ -239,7 +239,7 @@ template<class T>
 double armijo(double s, double beta, double sigma, const Matrix<T>& xk, double (*f)(Matrix<T>), Matrix<T> (*grad)(Matrix<T>), const Matrix<T>& dk) {
   std::cout << "INFO: Armijo run" << std::endl;
   unsigned iter = 0;
-  while (((*f)(xk + s * pow(beta, iter) * dk) - (*f)(xk)) < sigma * s * pow(beta, iter) * ((*grad)(xk) * dk.transpose()).get(1,1))
+  while (((*f)(xk + s * pow(beta, iter) * dk) - (*f)(xk)) < sigma * s * pow(beta, iter) * (((*grad)(xk)).transpose() * dk).get(1,1))
     ++iter;
   double param = s * pow(beta, iter);
   std::cout << "\t#iter=" << iter+1 << ", parameter=" << param << std::endl;
