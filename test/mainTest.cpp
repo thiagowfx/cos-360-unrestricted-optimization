@@ -199,6 +199,19 @@ TEST(MatrixTest, transpose) {
   EXPECT_THROW(t.get(2,2), std::exception);
 }
 
+TEST(MatrixTest, t) {
+  Matrix m(2,1);
+  m.set(1,1,1.0);
+  m.set(2,1,2.0);
+  Matrix t = m.t();
+  EXPECT_EQ(t.getRows(), 1);
+  EXPECT_EQ(t.getCols(), 2);
+  EXPECT_DOUBLE_EQ(t.get(1,1), 1.0);
+  EXPECT_DOUBLE_EQ(t.get(1,2), 2.0);
+  EXPECT_THROW(t.get(2,1), std::exception);
+  EXPECT_THROW(t.get(2,2), std::exception);
+}
+
 TEST(MatrixTest, det2) {
   Matrix m(2,2,2.0);
   m.set(2,1,3.0);

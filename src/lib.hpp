@@ -52,6 +52,9 @@ class Matrix {
     /// Return the transpose of this matrix.
     Matrix transpose() const;
 
+    /// Transpose alias.
+    Matrix t() const;
+
     /// Return true if this is a vector (i.e., a row vector or a column vector).
     bool isVector() const;
 
@@ -181,6 +184,10 @@ Matrix Matrix::operator/(double s) const {
     for (unsigned j = 1; j <= n; ++j)
       a.set(i, j, s / get(i,j));
   return a;
+}
+
+Matrix Matrix::t() const {
+  return this->transpose();
 }
 
 Matrix Matrix::transpose() const {
