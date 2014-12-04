@@ -543,4 +543,14 @@ Matrix quasinewton_method(
   return Matrix();
 }
 
+Matrix solve_it(
+    double (*g)(Matrix),
+    Matrix (*gradg)(Matrix),
+    Matrix x0sub,
+    double epsilon
+    ) 
+{
+  
+}
+
 #endif
