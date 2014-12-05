@@ -317,10 +317,8 @@ double fa(Matrix x) {
 /// gradiente de fa
 Matrix gradfa(Matrix x) {
   Matrix w(2,1);
-  const double x1 = x.x1();
-  const double x2 = x.x2();
-  w.set(1, (2 * x1)   +   2 * ( exp(x1) - x2 ) * exp(x1)   );
-  w.set(2,                2 * ( exp(x1) - x2 ) * (-1)   );
+  w.set(1, (2 * x.x1()) + 2 * ( exp(x.x1()) - x.x2() ) * exp(x.x1()));
+  w.set(2,                2 * ( exp(x.x1()) - x.x2() ) * (-1));
   return w;
 }
 
@@ -332,21 +330,21 @@ double fb(Matrix x) {
 /// gradiente de fb
 Matrix gradfb(Matrix x) {
   Matrix w(2,1);
-  w.set(1, (1.0/(2 * fb(x))) * gradfa(x).x1() );
-  w.set(2, (1.0/(2 * fb(x))) * gradfa(x).x2() );
+  w.set(1, (1.0/(2 * fb(x))) * gradfa(x).x1());
+  w.set(2, (1.0/(2 * fb(x))) * gradfa(x).x2());
   return w;
 }
 
 /// fc
 double fc(Matrix x) {
-  return log(1 + fa(x));
+  return log(1.0 + fa(x));
 }
 
 /// gradiente de fc
 Matrix gradfc(Matrix x) {
   Matrix w(2,1);
-  w.set(1, (1.0/fc(x)) * gradfa(x).x1() );
-  w.set(2, (1.0/fc(x)) * gradfa(x).x2() );
+  w.set(1, (1.0/fc(x)) * gradfa(x).x1());
+  w.set(2, (1.0/fc(x)) * gradfa(x).x2());
   return w;
 }
 
@@ -357,7 +355,7 @@ Matrix gradfc(Matrix x) {
  */
 double d(Matrix x, Matrix xkk) {
   return
-    pow( x.x1() - xkk.x1(), 2.0) +
+    pow(x.x1() - xkk.x1(), 2.0) +
     pow((x.x2() - xkk.x2()) - (exp(x.x1()) - exp(xkk.x1())), 2.0);
 }
 
@@ -431,7 +429,6 @@ double armijo_call(
   while (true) {
     if ( (f(x) - f(x + s * pow(beta, iter) * d)) >= -sigma * s * pow(beta, iter) * ((gradf(x)).t() * d).x() )
       break;
-
     ++iter;
   }
 
@@ -469,7 +466,7 @@ Matrix gradient_method(
     // Atualização do xk.
     xk = xk + ak * dk;
 
-    std::cout << "\tINFO: gradient_method iter" << std::endl;
+    std::cout << "\tINFO: gradient_method iter " << iter << std::endl;
     std::cout << "\t\t" << "dk: " << "(" << dk.x1() << ", " << dk.x2() << ")" << std::endl;
     std::cout << "\t\t" << "xk: " << "(" << xk.x1() << ", " << xk.x2() << ")" << std::endl;
     std::cout << "\t\t" << "f(xk): " << f(xk) << std::endl;
@@ -516,7 +513,7 @@ Matrix newton_method(
     // Atualização do xk.
     xk = xk + ak * dk;
 
-    std::cout << "\tINFO: newton_method iter" << std::endl;
+    std::cout << "\tINFO: newton_method iter " << iter << std::endl;
     std::cout << "\t\t" << "dk: " << "(" << dk.x1() << ", " << dk.x2() << ")" << std::endl;
     std::cout << "\t\t" << "xk: " << "(" << xk.x1() << ", " << xk.x2() << ")" << std::endl;
     std::cout << "\t\t" << "f(xk): " << f(xk) << std::endl;
@@ -548,12 +545,15 @@ Matrix quasinewton_method(
 }
 
 enum {FA, FB, FC};
+enum {GRADIENT, NEWTON, QUASINEWTON};
 
 Matrix solve_it(
     int function,
     Matrix x0sub,
     int limitx0,
-    double epsilon
+    double epsilonSub,
+    double epsilonMeth,
+    int method
     ) 
 {
   std::cout << "INFO: solve_it run" << std::endl;
@@ -574,30 +574,44 @@ Matrix solve_it(
 
     // Lambdak
     double lambdak = 1.0/iter;
-    
+
     // Resolver um problema de otimização.
-    switch(function) {
-      case FA:
-        xnext = gradient_method(
-            [lambdak,xk](Matrix x) -> double { return g(fa, lambdak, x, xk); },
-            [lambdak,xk](Matrix x) -> Matrix { return gradg(gradfa, lambdak, x, xk); },
-            x0,
-            epsilon
-            );
-        // xnext = gradient_method( 
-            //<g(fa, lambdak, _1, xk)>,
-            //<gradg(gradfa, lambdak, _1, xk)>,
-            //x0,
-            //epsilon);
-        break;
-      case FB:
-        break;
-      case FC:
-        break;
+    if (method == GRADIENT) {
+      switch(function) {
+        case FA:
+          xnext = gradient_method(
+              [lambdak,xk](Matrix x) -> double { return g(fa, lambdak, x, xk); },
+              [lambdak,xk](Matrix x) -> Matrix { return gradg(gradfa, lambdak, x, xk); },
+              x0,
+              epsilonMeth
+              );
+          // xnext = gradient_method( 
+          //<g(fa, lambdak, _1, xk)>,
+          //<gradg(gradfa, lambdak, _1, xk)>,
+          //x0,
+          //epsilonMeth);
+          break;
+        case FB:
+          xnext = gradient_method(
+              [lambdak,xk](Matrix x) -> double { return g(fb, lambdak, x, xk); },
+              [lambdak,xk](Matrix x) -> Matrix { return gradg(gradfb, lambdak, x, xk); },
+              x0,
+              epsilonMeth
+              );
+          break;
+        case FC:
+          xnext = gradient_method(
+              [lambdak,xk](Matrix x) -> double { return g(fc, lambdak, x, xk); },
+              [lambdak,xk](Matrix x) -> Matrix { return gradg(gradfc, lambdak, x, xk); },
+              x0,
+              epsilonMeth
+              );
+          break;
+      }
     }
 
     // Critério de parada 1.
-    if ((xnext - xk).mod() < epsilon) {
+    if ((xnext - xk).mod() < epsilonSub) {
       std::cout << "\t" << "Finished solve_it. Reason: xnext near to xk" << std::endl;
       std::cout << "\t\t" << "xnext (optimal point):" << "(" << xnext.x1() << ", " << xnext.x2() << ")" << std::endl;
       std::cout << "\t\t" << "xk (previous one): " << "(" << xk.x1() << ", " << xk.x2() << ")" << std::endl;
@@ -608,15 +622,15 @@ Matrix solve_it(
     bool terminate = false;
     switch(function) {
       case FA:
-        if ((*fa)(xnext) < epsilon)
+        if ((*fa)(xnext) < epsilonSub)
           terminate = true;
         break;
       case FB:
-        if ((*fb)(xnext) < epsilon)
+        if ((*fb)(xnext) < epsilonSub)
           terminate = true;
         break;
       case FC:
-        if ((*fc)(xnext) < epsilon)
+        if ((*fc)(xnext) < epsilonSub)
           terminate = true;
         break;
     }
@@ -628,22 +642,22 @@ Matrix solve_it(
 
     xk = xnext;
   }
-  
+
   std::cout << "\t" << "elapsed time:" << timer.elapsed() << "s" << std::endl;
   std::cout << "\t" << "initial point: " << "(" << x0sub.x1() << ", " << x0sub.x2() << ")" << std::endl;
-  std::cout << "\t" << "epsilon: " << epsilon << std::endl;
+  std::cout << "\t" << "epsilon: " << epsilonSub << std::endl;
   std::cout << "\t" << "n_iterations: " << iter << std::endl;
   std::cout << "\t" << "optimal point: " << "(" << xnext.x1() << ", " << xnext.x2() << ")" << std::endl;
 
   switch(function) {
     case FA:
-        std::cout << "\t" << "optimal value: " << (*fa)(xnext) << std::endl;
+      std::cout << "\t" << "optimal value: " << (*fa)(xnext) << std::endl;
       break;
     case FB:
-        std::cout << "\t" << "optimal value: " << (*fb)(xnext) << std::endl;
+      std::cout << "\t" << "optimal value: " << (*fb)(xnext) << std::endl;
       break;
     case FC:
-        std::cout << "\t" << "optimal value: " << (*fc)(xnext) << std::endl;
+      std::cout << "\t" << "optimal value: " << (*fc)(xnext) << std::endl;
       break;
   }
   return xnext;
