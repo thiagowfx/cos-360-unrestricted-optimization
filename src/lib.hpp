@@ -8,6 +8,7 @@
 #include <ctime>
 #include <iomanip>
 #include <iostream>
+#include <functional>
 #include <stdexcept>
 #include <vector>
 using namespace std;
@@ -381,24 +382,24 @@ Matrix gradd(Matrix x, Matrix xkk) {
  * g = f + (lambdak / 2) * d
  */
 double g(
-    double (*f)(Matrix),
+    std::function<double(Matrix)> f,
     double lambdak,
     Matrix x,
     Matrix xkk
     )
 {
-  return (*f)(x) + ((lambdak/2.0) * d(x,xkk));
+  return f(x) + (((lambdak/2.0) * d(x,xkk)));
 }
 
 /// gradiente de g
 Matrix gradg(
-    Matrix (*gradf)(Matrix),
+    std::function<Matrix(Matrix)> gradf,
     double lambdak,
     Matrix x,
     Matrix xkk
     )
 {
-  return (*gradf)(x) + ((lambdak/2.0) * gradd(x,xkk));
+  return gradf(x) + ((lambdak/2.0) * gradd(x,xkk));
 }
 
 /**
@@ -417,8 +418,8 @@ double armijo_call(
     double s,
     double beta,              // 0 < b < 1
     double sigma,             // 0 < o < 1
-    double (*f)(Matrix),
-    Matrix (*gradf)(Matrix),
+    std::function<double(Matrix)> f,
+    std::function<Matrix(Matrix)> gradf,
     const Matrix& x,
     const Matrix& d
     ) {
@@ -428,7 +429,7 @@ double armijo_call(
   unsigned iter = 0;
 
   while (true) {
-    if ( ((*f)(x) - (*f)(x + s * pow(beta, iter) * d)) >= -sigma * s * pow(beta, iter) * (((*gradf)(x)).t() * d).x() )
+    if ( (f(x) - f(x + s * pow(beta, iter) * d)) >= -sigma * s * pow(beta, iter) * ((gradf(x)).t() * d).x() )
       break;
 
     ++iter;
@@ -440,8 +441,8 @@ double armijo_call(
 }
 
 Matrix gradient_method(
-    double (*f)(Matrix),
-    Matrix (*gradf)(Matrix),
+    std::function<double(Matrix)> f,
+    std::function<Matrix(Matrix)> gradf,
     Matrix x0,
     double epsilon
     ) {
@@ -456,11 +457,11 @@ Matrix gradient_method(
 
   while(true) {
     // Critério de parada.
-    if (((*gradf)(xk)).mod() < epsilon) 
+    if ((gradf(xk)).mod() < epsilon) 
       break;
     ++iter;
 
-    dk = (-1) * (*gradf)(xk);
+    dk = (-1) * gradf(xk);
 
     double ak = armijo_call(0.8, 0.8, 0.8, f, gradf, xk, dk);
     ++n_call_armijo;
@@ -471,6 +472,7 @@ Matrix gradient_method(
     std::cout << "\tINFO: gradient_method iter" << std::endl;
     std::cout << "\t\t" << "dk: " << "(" << dk.x1() << ", " << dk.x2() << ")" << std::endl;
     std::cout << "\t\t" << "xk: " << "(" << xk.x1() << ", " << xk.x2() << ")" << std::endl;
+    std::cout << "\t\t" << "f(xk): " << f(xk) << std::endl;
   }
 
   std::cout << "\t" << "elapsed time:" << timer.elapsed() << "s" << std::endl;
@@ -479,15 +481,15 @@ Matrix gradient_method(
   std::cout << "\t" << "n_iterations: " << iter + 1 << std::endl;
   std::cout << "\t" << "n_call_armijo: " << n_call_armijo << std::endl;
   std::cout << "\t" << "optimal point: " << "(" << xk.x1() << ", " << xk.x2() << ")" << std::endl;
-  std::cout << "\t" << "optimal value: " << (*f)(xk) << std::endl;
+  std::cout << "\t" << "optimal value: " << f(xk) << std::endl;
 
   return xk;
 }
 
 Matrix newton_method(
-    double (*f)(Matrix),
-    Matrix (*gradf)(Matrix),
-    Matrix (*invhessf)(Matrix),
+    std::function<double(Matrix)> f,
+    std::function<Matrix(Matrix)> gradf,
+    std::function<Matrix(Matrix)> invhessf,
     Matrix x0,
     double epsilon
     ) {
@@ -502,11 +504,11 @@ Matrix newton_method(
 
   while(true) {
     // Critério de parada.
-    if (((*gradf)(xk)).mod() < epsilon)
+    if ((gradf(xk)).mod() < epsilon)
       break;
     ++iter;
 
-    dk = (-1) * (*invhessf)(xk) * (*gradf)(xk);
+    dk = (-1) * invhessf(xk) * gradf(xk);
 
     double ak = armijo_call(0.8, 0.8, 0.8, f, gradf, xk, dk);
     ++n_call_armijo;
@@ -517,6 +519,7 @@ Matrix newton_method(
     std::cout << "\tINFO: newton_method iter" << std::endl;
     std::cout << "\t\t" << "dk: " << "(" << dk.x1() << ", " << dk.x2() << ")" << std::endl;
     std::cout << "\t\t" << "xk: " << "(" << xk.x1() << ", " << xk.x2() << ")" << std::endl;
+    std::cout << "\t\t" << "f(xk): " << f(xk) << std::endl;
   }
 
   std::cout << "\t" << "elapsed time:" << timer.elapsed() << "s" << std::endl;
@@ -525,19 +528,19 @@ Matrix newton_method(
   std::cout << "\t" << "n_iterations: " << iter + 1 << std::endl;
   std::cout << "\t" << "n_call_armijo: " << n_call_armijo << std::endl;
   std::cout << "\t" << "optimal point: " << "(" << xk.x1() << ", " << xk.x2() << ")" << std::endl;
-  std::cout << "\t" << "optimal value: " << (*f)(xk) << std::endl;
+  std::cout << "\t" << "optimal value: " << f(xk) << std::endl;
 
   return xk;
 }
 
-typedef enum Posto {POSTO1, POSTO2} Posto;
+enum {POSTO1, POSTO2};
 
 Matrix quasinewton_method(
     double (*f)(Matrix),
     Matrix (*gradf)(Matrix),
     Matrix x0,
     Matrix B0,
-    Posto posto,
+    int posto,
     double epsilon
     ) {
   // TODO.
@@ -545,6 +548,7 @@ Matrix quasinewton_method(
 }
 
 enum {FA, FB, FC};
+
 Matrix solve_it(
     int function,
     Matrix x0sub,
@@ -574,13 +578,17 @@ Matrix solve_it(
     // Resolver um problema de otimização.
     switch(function) {
       case FA:
-        // TODO
+        xnext = gradient_method(
+            [lambdak,xk](Matrix x) -> double { return g(fa, lambdak, x, xk); },
+            [lambdak,xk](Matrix x) -> Matrix { return gradg(gradfa, lambdak, x, xk); },
+            x0,
+            epsilon
+            );
         // xnext = gradient_method( 
             //<g(fa, lambdak, _1, xk)>,
             //<gradg(gradfa, lambdak, _1, xk)>,
             //x0,
             //epsilon);
-        xnext = x0;
         break;
       case FB:
         break;
@@ -627,7 +635,6 @@ Matrix solve_it(
   std::cout << "\t" << "n_iterations: " << iter << std::endl;
   std::cout << "\t" << "optimal point: " << "(" << xnext.x1() << ", " << xnext.x2() << ")" << std::endl;
 
-  // TODO
   switch(function) {
     case FA:
         std::cout << "\t" << "optimal value: " << (*fa)(xnext) << std::endl;

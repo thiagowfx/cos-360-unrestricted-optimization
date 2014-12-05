@@ -1,19 +1,33 @@
 #include "lib.hpp"
 using namespace std;
 
+int sum(int a, int b) {
+  return a + b;
+}
+
+int diff(int a, int b) {
+  return a - b;
+}
+
+int apply(std::function<int(int,int)> f, int x, int y) {
+  return f(x,y);
+}
+
 int main(int argc, char **argv) {
+  //cout << sum(1,2) << endl << apply(sum,1,2) << endl;
+  //for (int i = 0; i < 5; ++i) {
+  //cout << apply( [i](int x, int y) -> int {return x + y + i;} , 1, 2) << endl; }
+
   // Semente para números aleatórios.
   srand(time(NULL));
 
-  // cout precision globally
+  // set cout precision globally
   // std::cout << std::fixed << std::setprecision(6);
 
-  Matrix x0sub(2,1);
-  x0sub.set(1, 3.0);
-  x0sub.set(2, 1.0);
-
-  solve_it(FA, x0sub, 10, 1e-6);
-  // gradient_method(fa, gradfa, x, 1e-7);
+  solve_it(FA, Matrix(vector<double>{3.0,1.0}), 4, 1e-5);
+  // gradient_method(fa, gradfa, Matrix(vector<double>{3.0,1.0}), 1e-7);
 
   return 0;
 }
+
+
