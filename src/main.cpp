@@ -5,15 +5,15 @@ int main(int argc, char **argv) {
   // Semente para números aleatórios.
   srand(time(NULL));
 
-  double x1 = rand_int(10);
-  double x2 = rand_int(10);
+  // cout precision globally
+  // std::cout << std::fixed << std::setprecision(6);
 
-  Matrix x(2,1);
-  x.set(1, x1);
-  x.set(2, x2);
-  x.debug();
+  Matrix x0sub(2,1);
+  x0sub.set(1, 3.0);
+  x0sub.set(2, 1.0);
 
-  gradient_method(fa, gradfa, x, 1e-7);
+  solve_it(FA, x0sub, 10, 1e-6);
+  // gradient_method(fa, gradfa, x, 1e-7);
 
   return 0;
 }

@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
+#include <iomanip>
 #include <iostream>
 #include <stdexcept>
 #include <vector>
@@ -543,14 +544,102 @@ Matrix quasinewton_method(
   return Matrix();
 }
 
+enum {FA, FB, FC};
 Matrix solve_it(
-    double (*g)(Matrix),
-    Matrix (*gradg)(Matrix),
+    int function,
     Matrix x0sub,
+    int limitx0,
     double epsilon
     ) 
 {
+  std::cout << "INFO: solve_it run" << std::endl;
+  std::cout << "initial point: " << "(" << x0sub.x1() << ", " << x0sub.x2() << ")" << std::endl;
+
+  Timer timer;
+  Matrix xk = x0sub;
+  Matrix xnext;
+  unsigned iter = 0;
+
+  while(true) {
+    ++iter;
+
+    // Inicialização do problema de otimização
+    Matrix x0(2,1);
+    x0.set(1, rand_double(limitx0));
+    x0.set(2, rand_double(limitx0));
+
+    // Lambdak
+    double lambdak = 1.0/iter;
+    
+    // Resolver um problema de otimização.
+    switch(function) {
+      case FA:
+        // TODO
+        // xnext = gradient_method( 
+            //<g(fa, lambdak, _1, xk)>,
+            //<gradg(gradfa, lambdak, _1, xk)>,
+            //x0,
+            //epsilon);
+        xnext = x0;
+        break;
+      case FB:
+        break;
+      case FC:
+        break;
+    }
+
+    // Critério de parada 1.
+    if ((xnext - xk).mod() < epsilon) {
+      std::cout << "\t" << "Finished solve_it. Reason: xnext near to xk" << std::endl;
+      std::cout << "\t\t" << "xnext (optimal point):" << "(" << xnext.x1() << ", " << xnext.x2() << ")" << std::endl;
+      std::cout << "\t\t" << "xk (previous one): " << "(" << xk.x1() << ", " << xk.x2() << ")" << std::endl;
+      break;
+    }
+
+    // Critério de parada 2.
+    bool terminate = false;
+    switch(function) {
+      case FA:
+        if ((*fa)(xnext) < epsilon)
+          terminate = true;
+        break;
+      case FB:
+        if ((*fb)(xnext) < epsilon)
+          terminate = true;
+        break;
+      case FC:
+        if ((*fc)(xnext) < epsilon)
+          terminate = true;
+        break;
+    }
+    if (terminate) {
+      std::cout << "\t" << "Finished solve_it. Reason: f(xnext) near to zero" << std::endl;
+      std::cout << "\t\t" << "xnext (optimal point):" << "(" << xnext.x1() << ", " << xnext.x2() << ")" << std::endl;
+      break;
+    }
+
+    xk = xnext;
+  }
   
+  std::cout << "\t" << "elapsed time:" << timer.elapsed() << "s" << std::endl;
+  std::cout << "\t" << "initial point: " << "(" << x0sub.x1() << ", " << x0sub.x2() << ")" << std::endl;
+  std::cout << "\t" << "epsilon: " << epsilon << std::endl;
+  std::cout << "\t" << "n_iterations: " << iter << std::endl;
+  std::cout << "\t" << "optimal point: " << "(" << xnext.x1() << ", " << xnext.x2() << ")" << std::endl;
+
+  // TODO
+  switch(function) {
+    case FA:
+        std::cout << "\t" << "optimal value: " << (*fa)(xnext) << std::endl;
+      break;
+    case FB:
+        std::cout << "\t" << "optimal value: " << (*fb)(xnext) << std::endl;
+      break;
+    case FC:
+        std::cout << "\t" << "optimal value: " << (*fc)(xnext) << std::endl;
+      break;
+  }
+  return xnext;
 }
 
 #endif
