@@ -622,15 +622,15 @@ Matrix solve_it(
     bool terminate = false;
     switch(function) {
       case FA:
-        if ((*fa)(xnext) < epsilonSub)
+        if (((*gradfa)(xnext)).mod() < epsilonSub)
           terminate = true;
         break;
       case FB:
-        if ((*fb)(xnext) < epsilonSub)
+        if (((*gradfb)(xnext)).mod() < epsilonSub)
           terminate = true;
         break;
       case FC:
-        if ((*fc)(xnext) < epsilonSub)
+        if (((*gradfc)(xnext)).mod() < epsilonSub)
           terminate = true;
         break;
     }

@@ -8,7 +8,7 @@ int main(int argc, char **argv) {
   // set cout precision globally
   std::cout << std::fixed << std::setprecision(6);
 
-  solve_it(FA, Matrix(vector<double>{3.0,1.0}), 4, 1e-7, 1e-2, GRADIENT);
+  solve_it(FB, Matrix(vector<double>{3.0,1.0}), 4, 1e-7, 1e-2, GRADIENT);
 
   return 0;
 }
