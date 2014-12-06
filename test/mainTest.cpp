@@ -131,9 +131,14 @@ TEST(MatrixTest, operatorMultScalar) {
 
 TEST(MatrixTest, operatorDivScalar) {
   Matrix m(2,1, 2.0);
-  Matrix s = m / 2;
+  Matrix s = m / 2.0;
   EXPECT_DOUBLE_EQ(s.get(1,1), 1.0);
   EXPECT_DOUBLE_EQ(s.get(2,1), 1.0);
+
+  Matrix n(2,1,10.0);
+  Matrix t = n / 3.0;
+  EXPECT_DOUBLE_EQ(t.get(1,1), 10.0/3.0);
+  EXPECT_DOUBLE_EQ(t.get(2,1), 10.0/3.0);
 }
 
 TEST(MatrixTest, isVector) {

@@ -1,5 +1,5 @@
-#ifndef _LIB_H_
-#define _LIB_H_
+#ifndef _LIB_HPP_
+#define _LIB_HPP_
 
 #include <algorithm>
 #include <cmath>
@@ -68,7 +68,7 @@ class Matrix {
     /// IF this is a 2x2 matrix, return its determinant.
     double det2() const;
 
-    /// If this is a vector, return its module.
+    /// If this is a vector, return its module (norma).
     double mod() const;
 
     /// If this is a 1x1 vector, return its only element.
@@ -97,6 +97,7 @@ class Matrix {
     vector< vector<double> > v;
 };
 
+/// Return a n x n identity matrix
 Matrix eye(unsigned n) {
   Matrix w(n,n,0.0);
   for (unsigned i = 1; i <= n; ++i)
@@ -185,7 +186,7 @@ Matrix Matrix::operator*(double s) const {
   Matrix a(m, n);
   for (unsigned i = 1; i <= m; ++i)
     for (unsigned j = 1; j <= n; ++j)
-      a.set(i, j, s * get(i,j));
+      a.set(i, j, get(i,j) * s);
   return a;
 }
 
@@ -193,7 +194,7 @@ Matrix Matrix::operator/(double s) const {
   Matrix a(m, n);
   for (unsigned i = 1; i <= m; ++i)
     for (unsigned j = 1; j <= n; ++j)
-      a.set(i, j, s / get(i,j));
+      a.set(i, j, get(i,j) / s);
   return a;
 }
 
@@ -322,6 +323,16 @@ Matrix gradfa(Matrix x) {
   return w;
 }
 
+/// hessiana de fa
+Matrix hessfa(Matrix x) {
+  Matrix w(2,2);
+  w.set(1, 1, 2 + 4 * exp(2 * x.x1()) - 2 * exp(x.x1()) * x.x2());
+  w.set(1, 2, -2 * exp(x.x1()));
+  w.set(2, 1, -2 * exp(x.x1()));
+  w.set(2, 2, 2);
+  return w;
+}
+
 /// fb
 double fb(Matrix x) {
   return sqrt(fa(x));
@@ -362,22 +373,29 @@ double d(Matrix x, Matrix xkk) {
 /// gradiente de d
 Matrix gradd(Matrix x, Matrix xkk) {
   Matrix w(2,1);
-
   w.set(1,
       2 * (x.x1() - xkk.x1()) +
       2 * (-exp(x.x1())) * ((x.x2() - xkk.x2()) - (exp(x.x1()) - exp(xkk.x1())))
       );
-
   w.set(2,
       2 * ((x.x2() - xkk.x2()) - (exp(x.x1()) - exp(xkk.x1())))
       );
-
   return w;
+}
+
+/// hessiana de d
+Matrix hessd(Matrix x, Matrix xkk) {
+	Matrix w(2,2);
+	w.set(1, 1, 2 + 4 * exp(2*x.x1()) - 2 * exp(x.x1()) * (x.x2() - xkk.x2() + exp(xkk.x1())));
+	w.set(1, 2, -2 * exp(x.x1()));
+	w.set(2, 1, -2 * exp(x.x1()));
+	w.set(2, 2, 2);
+	return w;
 }
 
 /**
  * g do subproblema
- * g = f + (lambdak / 2) * d
+ * g = f + (lambdak / 2.0) * d
  */
 double g(
     std::function<double(Matrix)> f,
@@ -400,11 +418,39 @@ Matrix gradg(
   return gradf(x) + ((lambdak/2.0) * gradd(x,xkk));
 }
 
+/// hessiana de g
+Matrix hessg(
+    std::function<Matrix(Matrix)> hessf,
+    double lambdak,
+    Matrix x,
+    Matrix xkk
+)
+{
+    return hessf(x) + ((lambdak/2.0) * hessd(x,xkk));
+}
+
+Matrix invhessg(
+    std::function<Matrix(Matrix)> hessf,
+    double lambdak,
+    Matrix x,
+    Matrix xkk
+)
+{
+  Matrix w = hessg(hessf, lambdak, x, xkk);	
+  Matrix ret(2,2);
+  ret.set(1, 1, w.get(2,2));
+  ret.set(1, 2, (-1) * w.get(1,2));
+  ret.set(2, 1, (-1) * w.get(2,1));
+  ret.set(2, 2, w.get(1,1));
+  ret = ret / w.det2();
+  return ret;
+}
+
 /**
  * Regra de Armijo.
  * Encontrar um t = sb^m tal que
- * f(x + sb^m d) - f(x) <= o sb^m gradf(x)' d ==>
- * f(x + td) - f(x) <= o t gradf(x)' d
+ * f(x + sb^m p) - f(x) <= o sb^m gradf(x)' p ==>
+ * f(x + tp) - f(x) <= o t gradf(x)' p
  *
  * Constraints:
  *    m >= 0
@@ -418,16 +464,21 @@ double armijo_call(
     double sigma,             // 0 < o < 1
     std::function<double(Matrix)> f,
     std::function<Matrix(Matrix)> gradf,
+    // Para copiar o valor: Matrix x
+    // Para apenas copiar a referência do valor: const Matrix& x
+    // Vantagem da versão com referência: é mais rápida
     const Matrix& x,
-    const Matrix& d
-    ) {
+    const Matrix& p
+    )
+{
   std::cout << "\t" << "INFO: armijo_call run" << std::endl;
 
   // Skipping right through the test means 1 iteration.
+  // iter = m, só de armijo
   unsigned iter = 0;
 
   while (true) {
-    if ( (f(x) - f(x + s * pow(beta, iter) * d)) >= -sigma * s * pow(beta, iter) * ((gradf(x)).t() * d).x() )
+    if ( (f(x) - f(x + s * pow(beta, iter) * p)) >= -sigma * s * pow(beta, iter) * ((gradf(x)).t() * p).x() )
       break;
     ++iter;
   }
@@ -442,7 +493,8 @@ Matrix gradient_method(
     std::function<Matrix(Matrix)> gradf,
     Matrix x0,
     double epsilon
-    ) {
+    )
+{
   std::cout << "INFO: gradient_method run" << std::endl;
   std::cout << "initial point: " << "(" << x0.x1() << ", " << x0.x2() << ")" << std::endl;
 
@@ -460,13 +512,15 @@ Matrix gradient_method(
 
     dk = (-1) * gradf(xk);
 
-    double ak = armijo_call(0.8, 0.8, 0.8, f, gradf, xk, dk);
+    // Ordem: s, beta, sigma (o), ...
+    double ak = armijo_call(1.0, 0.5, 0.1, f, gradf, xk, dk);
     ++n_call_armijo;
 
     // Atualização do xk.
     xk = xk + ak * dk;
 
-    std::cout << "\tINFO: gradient_method iter " << iter << std::endl;
+    // std::cout << "\tINFO: gradient_method iter " << iter << std::endl;
+    std::cout << "iter = " << iter << "\tINFO: gradient_method" << std::endl;
     std::cout << "\t\t" << "dk: " << "(" << dk.x1() << ", " << dk.x2() << ")" << std::endl;
     std::cout << "\t\t" << "xk: " << "(" << xk.x1() << ", " << xk.x2() << ")" << std::endl;
     std::cout << "\t\t" << "f(xk): " << f(xk) << std::endl;
@@ -489,7 +543,8 @@ Matrix newton_method(
     std::function<Matrix(Matrix)> invhessf,
     Matrix x0,
     double epsilon
-    ) {
+    )
+{
   std::cout << "INFO: newton_method run" << std::endl;
   std::cout << "initial point: " << "(" << x0.x1() << ", " << x0.x2() << ")" << std::endl;
 
@@ -507,7 +562,7 @@ Matrix newton_method(
 
     dk = (-1) * invhessf(xk) * gradf(xk);
 
-    double ak = armijo_call(0.8, 0.8, 0.8, f, gradf, xk, dk);
+    double ak = armijo_call(1.0, 0.5, 0.1, f, gradf, xk, dk);
     ++n_call_armijo;
 
     // Atualização do xk.
@@ -530,8 +585,6 @@ Matrix newton_method(
   return xk;
 }
 
-enum {POSTO1, POSTO2};
-
 Matrix quasinewton_method(
     double (*f)(Matrix),
     Matrix (*gradf)(Matrix),
@@ -539,7 +592,8 @@ Matrix quasinewton_method(
     Matrix B0,
     int posto,
     double epsilon
-    ) {
+    )
+{
   // TODO.
   return Matrix();
 }
@@ -575,7 +629,7 @@ Matrix solve_it(
     // Lambdak
     double lambdak = 1.0/iter;
 
-    // Resolver um problema de otimização.
+    // Resolver um problema de otimização (método do gradiente)
     if (method == GRADIENT) {
       switch(function) {
         case FA:
@@ -585,11 +639,6 @@ Matrix solve_it(
               x0,
               epsilonMeth
               );
-          // xnext = gradient_method( 
-          //<g(fa, lambdak, _1, xk)>,
-          //<gradg(gradfa, lambdak, _1, xk)>,
-          //x0,
-          //epsilonMeth);
           break;
         case FB:
           xnext = gradient_method(
@@ -603,6 +652,21 @@ Matrix solve_it(
           xnext = gradient_method(
               [lambdak,xk](Matrix x) -> double { return g(fc, lambdak, x, xk); },
               [lambdak,xk](Matrix x) -> Matrix { return gradg(gradfc, lambdak, x, xk); },
+              x0,
+              epsilonMeth
+              );
+          break;
+      }
+    }
+
+    // Resolver um problema de otimização (método de Newton)
+    else if (method == NEWTON) {
+      switch(function) {
+        case FA:
+          xnext = newton_method(
+              [lambdak,xk](Matrix x) -> double { return g(fa, lambdak, x, xk); },
+              [lambdak,xk](Matrix x) -> Matrix { return gradg(gradfa, lambdak, x, xk); },
+              [lambdak,xk](Matrix x) -> Matrix { return invhessg(hessfa, lambdak, x, xk); },
               x0,
               epsilonMeth
               );
@@ -663,4 +727,4 @@ Matrix solve_it(
   return xnext;
 }
 
-#endif
+#endif // _LIB_HPP_
