@@ -11,10 +11,25 @@ int main(int argc, char **argv) {
   DEFAULT_PRECISION = 7;
   std::cout << std::fixed << std::setprecision(DEFAULT_PRECISION);
 
+  // Resposta: o ponto encontrado pelo método de otimização.
+  Matrix ans;
+
+  /* 
+     Como declarar uma Matrix 2 x 1?
+    
+     Método #1: use-o quando tiver que usar a matriz várias vezes
+        Matrix m(2,1);
+        m.set(1, 3.0);
+        m.set(2, 1.0);
+
+     Método #2: use-o quando só precisar usar a matriz uma vez, para passar como parâmetro para alguma função
+        Matrix(vector<double>{3.0, 1.0});
+  */
+
 
   // Exemplo com o método de Newton com busca de armijo.
-  /*
-  solve_it(
+  
+  ans = solve_it(
       FA,
       Matrix(vector<double>{1.0,0.0}),
       4,
@@ -22,12 +37,11 @@ int main(int argc, char **argv) {
       1e-2,
       NEWTON
       );
-    */
    
 
   // Exemplo com o método de Newton Puro.
   /*
-  solve_it(
+  ans = solve_it(
       FA,
       Matrix(vector<double>{1.0,0.0}),
       4,
@@ -40,7 +54,7 @@ int main(int argc, char **argv) {
 
   // Exemplo com o método do gradiente.
   /*
-  solve_it(
+  ans = solve_it(
       FA,
       Matrix(vector<double>{3.0,1.0}),
       4,
@@ -49,6 +63,9 @@ int main(int argc, char **argv) {
       GRADIENT
       );
    */
+
+  std::cout << "Error #1: " << (ans - Matrix(vector<double>{0.0,1.0})).mod() << std::endl;
+  std::cout << "Error #2: " << fa(ans) - fa(Matrix(vector<double>{0.0,1.0})) << std::endl;
 
   return 0;
 }
