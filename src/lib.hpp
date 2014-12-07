@@ -13,6 +13,12 @@
 #include <vector>
 using namespace std;
 
+// Precisão a ser usada para imprimir os doubles.
+unsigned DEFAULT_PRECISION = 6;
+
+// Epsilon para um t (de armijo) muito pequeno, de modo que o passo seja praticamente zero, entrando em um loop infinito.
+double EPSILON_ARMIJO_CALL = 1e-15;
+
 class Matrix {
   public:
     /// Construct a empty (0x0) matrix.
@@ -132,7 +138,7 @@ Matrix::Matrix(const vector<double>& w) :
 
 double Matrix::det2() const {
   if (m != 2 && n != 2)
-    throw std::invalid_argument("Can't apply det2 to a non 2x2 matrix");
+    throw std::invalid_argument("ERROR: Can't apply det2 to a non 2x2 matrix");
   return get(1,1) * get(2,2) - get(1,2) * get(2,1); 
 }
 
@@ -225,21 +231,21 @@ double Matrix::x() const {
   if (m == 1 && n == 1)
     return get(1,1);
   else
-    throw std::invalid_argument("Not a 1x1 Matrix");
+    throw std::invalid_argument("ERROR: Not a 1x1 Matrix");
 }
 
 double Matrix::x1() const {
   if (m == 2 && n == 1)
     return get(1,1);  
   else
-    throw std::invalid_argument("Not a 2x1 column vector");
+    throw std::invalid_argument("ERROR: Not a 2x1 column vector");
 }
 
 double Matrix::x2() const {
   if (m == 2 && n == 1)
     return get(2,1);  
   else
-    throw std::invalid_argument("Not a 2x1 column vector");
+    throw std::invalid_argument("ERROR: Not a 2x1 column vector");
 }
 
 unsigned Matrix::length() const {
@@ -249,7 +255,7 @@ unsigned Matrix::length() const {
 Matrix Matrix::operator*(const Matrix& o) const {
   Matrix w(getRows(), o.getCols());
   if (getCols() != o.getRows())
-    throw std::invalid_argument("Invalid matrix multiplication");
+    throw std::invalid_argument("ERROR: Invalid matrix multiplication");
   for (unsigned i = 1; i <= getRows(); ++i)
     for (unsigned j = 1; j <= o.getCols(); ++j) {
       double sum = 0.0;
@@ -429,6 +435,7 @@ Matrix hessg(
     return hessf(x) + ((lambdak/2.0) * hessd(x,xkk));
 }
 
+/// inversa da hessiana de g
 Matrix invhessg(
     std::function<Matrix(Matrix)> hessf,
     double lambdak,
@@ -437,12 +444,19 @@ Matrix invhessg(
 )
 {
   Matrix w = hessg(hessf, lambdak, x, xkk);	
+
   Matrix ret(2,2);
   ret.set(1, 1, w.get(2,2));
   ret.set(1, 2, (-1) * w.get(1,2));
   ret.set(2, 1, (-1) * w.get(2,1));
   ret.set(2, 2, w.get(1,1));
-  ret = ret / w.det2();
+
+  double det = w.det2();
+  if (det == 0) 
+    throw std::invalid_argument("ERROR: Determinant is zero: this matrix doesn't have a inverse");
+  else
+    ret = ret / det;
+
   return ret;
 }
 
@@ -471,7 +485,7 @@ double armijo_call(
     const Matrix& p
     )
 {
-  std::cout << "\t" << "INFO: armijo_call run" << std::endl;
+  std::cout << "\t\t" << "INFO: armijo_call: ";
 
   // Skipping right through the test means 1 iteration.
   // iter = m, só de armijo
@@ -484,10 +498,14 @@ double armijo_call(
   }
 
   double t = s * pow(beta, iter);
-  std::cout << "\t\t" << "#iter=" << iter+1 << ", t=" << t << std::endl;
+  std::cout <<
+    "#iter=" << iter+1 << ", t=" << setprecision(15) << t <<
+    setprecision(2) << " \%\% s=" << s << ", beta=" << beta << ", sigma=" << sigma <<
+    setprecision(DEFAULT_PRECISION) << std::endl; 
   return t;
 }
 
+/// Método do gradiente
 Matrix gradient_method(
     std::function<double(Matrix)> f,
     std::function<Matrix(Matrix)> gradf,
@@ -505,10 +523,13 @@ Matrix gradient_method(
   unsigned n_call_armijo = 0; // Número de chamadas de Armijo.
 
   while(true) {
+    ++iter;
+    std::cout << "-------------------------------------------------------------------" << std::endl;
+    std::cout << "Beginning iteration #" << iter << " of the gradient method:" << std::endl;
+
     // Critério de parada.
     if ((gradf(xk)).mod() < epsilon) 
       break;
-    ++iter;
 
     dk = (-1) * gradf(xk);
 
@@ -516,17 +537,21 @@ Matrix gradient_method(
     double ak = armijo_call(1.0, 0.5, 0.1, f, gradf, xk, dk);
     ++n_call_armijo;
 
+    if ((ak * dk).mod() < EPSILON_ARMIJO_CALL) {
+      throw std::invalid_argument("WARNING: ak * dk too small. Stopping here, otherwise this would be an infinite loop.");
+    }
+
     // Atualização do xk.
     xk = xk + ak * dk;
 
-    // std::cout << "\tINFO: gradient_method iter " << iter << std::endl;
     std::cout << "iter = " << iter << "\tINFO: gradient_method" << std::endl;
     std::cout << "\t\t" << "dk: " << "(" << dk.x1() << ", " << dk.x2() << ")" << std::endl;
     std::cout << "\t\t" << "xk: " << "(" << xk.x1() << ", " << xk.x2() << ")" << std::endl;
     std::cout << "\t\t" << "f(xk): " << f(xk) << std::endl;
   }
 
-  std::cout << "\t" << "elapsed time:" << timer.elapsed() << "s" << std::endl;
+  std::cout << "Information about this Gradient  method run:" << std::endl;
+  std::cout << "\t" << "elapsed time: " << timer.elapsed() << "s" << std::endl;
   std::cout << "\t" << "initial point: " << "(" << x0.x1() << ", " << x0.x2() << ")" << std::endl;
   std::cout << "\t" << "epsilon: " << epsilon << std::endl;
   std::cout << "\t" << "n_iterations: " << iter + 1 << std::endl;
@@ -537,44 +562,59 @@ Matrix gradient_method(
   return xk;
 }
 
+/// Método de Newton
 Matrix newton_method(
     std::function<double(Matrix)> f,
     std::function<Matrix(Matrix)> gradf,
     std::function<Matrix(Matrix)> invhessf,
     Matrix x0,
-    double epsilon
+    double epsilon,
+    bool pure = false     // false means to not use armijo
     )
 {
   std::cout << "INFO: newton_method run" << std::endl;
-  std::cout << "initial point: " << "(" << x0.x1() << ", " << x0.x2() << ")" << std::endl;
+  std::cout << "\t" << "with initial point: " << "(" << x0.x1() << ", " << x0.x2() << ")" << std::endl;
 
   Timer timer;
   Matrix dk;
   Matrix xk = x0;
   unsigned iter = 0;
   unsigned n_call_armijo = 0;
+  double ak;
 
   while(true) {
+    ++iter;
+    std::cout << "-------------------------------------------------------------------" << std::endl;
+    std::cout << "Beginning iteration #" << iter << " of the newton method:" << std::endl;
+
     // Critério de parada.
     if ((gradf(xk)).mod() < epsilon)
       break;
-    ++iter;
 
     dk = (-1) * invhessf(xk) * gradf(xk);
 
-    double ak = armijo_call(1.0, 0.5, 0.1, f, gradf, xk, dk);
-    ++n_call_armijo;
+    if (pure)
+      ak = 1;
+    else {
+      ak = armijo_call(1.0, 0.5, 0.1, f, gradf, xk, dk);
+      ++n_call_armijo;
+    }
+
+    if ((ak * dk).mod() < 1e-15) {
+      throw std::invalid_argument("WARNING: ak * dk too small. Stopping here, otherwise this would be an infinite loop.");
+    }
 
     // Atualização do xk.
     xk = xk + ak * dk;
 
-    std::cout << "\tINFO: newton_method iter " << iter << std::endl;
+    std::cout << "iter = " << iter << "\tINFO: newton_method" << std::endl;
     std::cout << "\t\t" << "dk: " << "(" << dk.x1() << ", " << dk.x2() << ")" << std::endl;
     std::cout << "\t\t" << "xk: " << "(" << xk.x1() << ", " << xk.x2() << ")" << std::endl;
     std::cout << "\t\t" << "f(xk): " << f(xk) << std::endl;
   }
 
-  std::cout << "\t" << "elapsed time:" << timer.elapsed() << "s" << std::endl;
+  std::cout << "Information about this Newton method run:" << std::endl;
+  std::cout << "\t" << "elapsed time: " << timer.elapsed() << "s" << std::endl;
   std::cout << "\t" << "initial point: " << "(" << x0.x1() << ", " << x0.x2() << ")" << std::endl;
   std::cout << "\t" << "epsilon: " << epsilon << std::endl;
   std::cout << "\t" << "n_iterations: " << iter + 1 << std::endl;
@@ -585,12 +625,12 @@ Matrix newton_method(
   return xk;
 }
 
+/// Método de quasi-newton com atualização de posto 2
 Matrix quasinewton_method(
     double (*f)(Matrix),
     Matrix (*gradf)(Matrix),
     Matrix x0,
     Matrix B0,
-    int posto,
     double epsilon
     )
 {
@@ -598,20 +638,24 @@ Matrix quasinewton_method(
   return Matrix();
 }
 
+/// Função a, Função b ou Função c
 enum {FA, FB, FC};
-enum {GRADIENT, NEWTON, QUASINEWTON};
 
+/// Tipo de método: gradiente, newton ou quasi-newton
+enum {GRADIENT, NEWTON, NEWTONPURE, QUASINEWTON};
+
+/// Resolver um problema de otimização
 Matrix solve_it(
-    int function,
-    Matrix x0sub,
-    int limitx0,
-    double epsilonSub,
-    double epsilonMeth,
-    int method
+    int function,       // resolver qual função?
+    Matrix x0sub,       // com que ponto inicial?
+    int limitx0,        // com que limites para gerar os pontos iniciais dos métodos?
+    double epsilonSub,  // epsilon do problema
+    double epsilonMeth, // epsilon dos métodos (gradiente, etc.)
+    int method          // resolver com qual método? (gradiente, etc.)
     ) 
 {
   std::cout << "INFO: solve_it run" << std::endl;
-  std::cout << "initial point: " << "(" << x0sub.x1() << ", " << x0sub.x2() << ")" << std::endl;
+  std::cout << "\t" << "with initial point: " << "(" << x0sub.x1() << ", " << x0sub.x2() << ")" << std::endl;
 
   Timer timer;
   Matrix xk = x0sub;
@@ -620,13 +664,37 @@ Matrix solve_it(
 
   while(true) {
     ++iter;
+    std::cout << "**************************************************************" << std::endl;
+    std::cout << "Beginning iteration #" << iter << " of solve_it:" << std::endl;
 
-    // Inicialização do problema de otimização
+    // Critério de parada 2.
+    bool terminate = false;
+    switch(function) {
+      case FA:
+        if (((*gradfa)(xk)).mod() < epsilonSub)
+          terminate = true;
+        break;
+      case FB:
+        if (((*gradfb)(xk)).mod() < epsilonSub)
+          terminate = true;
+        break;
+      case FC:
+        if (((*gradfc)(xk)).mod() < epsilonSub)
+          terminate = true;
+        break;
+    }
+    if (terminate) {
+      std::cout << "Finished solve_it. Reason: |gradf(xk)| near to zero, with xk = (" << xk.x1() << ", " << xk.x2() << ")" << std::endl;
+      xnext = xk;
+      break;
+    }
+
+    // Inicialização do problema de otimização, com números aleatórios
     Matrix x0(2,1);
     x0.set(1, rand_double(limitx0));
     x0.set(2, rand_double(limitx0));
 
-    // Lambdak
+    // Atualizando o valor do lambdak (=1.0/k)
     double lambdak = 1.0/iter;
 
     // Resolver um problema de otimização (método do gradiente)
@@ -660,7 +728,7 @@ Matrix solve_it(
     }
 
     // Resolver um problema de otimização (método de Newton)
-    else if (method == NEWTON) {
+    else if (method == NEWTON || method == NEWTONPURE) {
       switch(function) {
         case FA:
           xnext = newton_method(
@@ -668,46 +736,34 @@ Matrix solve_it(
               [lambdak,xk](Matrix x) -> Matrix { return gradg(gradfa, lambdak, x, xk); },
               [lambdak,xk](Matrix x) -> Matrix { return invhessg(hessfa, lambdak, x, xk); },
               x0,
-              epsilonMeth
+              epsilonMeth,
+              method == NEWTONPURE ? true : false
               );
+          break;
+        case FB:
+          throw std::invalid_argument("ERROR: invhessb is not implemented");
+          break;
+        case FC:
+          throw std::invalid_argument("ERROR: invhessc is not implemented");
           break;
       }
     }
 
-    // Critério de parada 1.
-    if ((xnext - xk).mod() < epsilonSub) {
-      std::cout << "\t" << "Finished solve_it. Reason: xnext near to xk" << std::endl;
-      std::cout << "\t\t" << "xnext (optimal point):" << "(" << xnext.x1() << ", " << xnext.x2() << ")" << std::endl;
-      std::cout << "\t\t" << "xk (previous one): " << "(" << xk.x1() << ", " << xk.x2() << ")" << std::endl;
-      break;
+    else if (method == QUASINEWTON) {
+      // TODO
     }
 
-    // Critério de parada 2.
-    bool terminate = false;
-    switch(function) {
-      case FA:
-        if (((*gradfa)(xnext)).mod() < epsilonSub)
-          terminate = true;
-        break;
-      case FB:
-        if (((*gradfb)(xnext)).mod() < epsilonSub)
-          terminate = true;
-        break;
-      case FC:
-        if (((*gradfc)(xnext)).mod() < epsilonSub)
-          terminate = true;
-        break;
-    }
-    if (terminate) {
-      std::cout << "\t" << "Finished solve_it. Reason: f(xnext) near to zero" << std::endl;
-      std::cout << "\t\t" << "xnext (optimal point):" << "(" << xnext.x1() << ", " << xnext.x2() << ")" << std::endl;
+    // Critério de parada 1.
+    if ((xnext - xk).mod() < epsilonSub) {
+      std::cout << "Finished solve_it. Reason: xnext is near to xk, they are equal to (" << xk.x1() << ", " << xk.x2() << ")" << std::endl;
       break;
     }
 
     xk = xnext;
   }
 
-  std::cout << "\t" << "elapsed time:" << timer.elapsed() << "s" << std::endl;
+  std::cout << "Information about this solve_it run:" << std::endl;
+  std::cout << "\t" << "elapsed time: " << timer.elapsed() << "s" << std::endl;
   std::cout << "\t" << "initial point: " << "(" << x0sub.x1() << ", " << x0sub.x2() << ")" << std::endl;
   std::cout << "\t" << "epsilon: " << epsilonSub << std::endl;
   std::cout << "\t" << "n_iterations: " << iter << std::endl;
