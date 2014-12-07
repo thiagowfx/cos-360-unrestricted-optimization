@@ -29,6 +29,7 @@ int main(int argc, char **argv) {
 
   // Exemplo com o método de Newton com busca de armijo.
   
+  /*
   ans = solve_it(
       FA,
       Matrix(vector<double>{1.0,0.0}),
@@ -37,6 +38,7 @@ int main(int argc, char **argv) {
       1e-2,
       NEWTON
       );
+  */
    
 
   // Exemplo com o método de Newton Puro.
@@ -63,6 +65,17 @@ int main(int argc, char **argv) {
       GRADIENT
       );
    */
+
+  // Exemplo com o método de Quasi Newton (BFGS)
+  
+  ans = solve_it(
+      FA,
+      Matrix(vector<double>{2.0,1.0}),
+      4,
+      1e-7,
+      1e-1,
+      QUASINEWTON
+      );
 
   std::cout << "Error #1: " << (ans - Matrix(vector<double>{0.0,1.0})).mod() << std::endl;
   std::cout << "Error #2: " << fa(ans) - fa(Matrix(vector<double>{0.0,1.0})) << std::endl;

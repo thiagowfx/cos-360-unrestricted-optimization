@@ -19,6 +19,9 @@ unsigned DEFAULT_PRECISION = 6;
 // Epsilon para um t (de armijo) muito pequeno, de modo que o passo seja praticamente zero, entrando em um loop infinito.
 double EPSILON_ARMIJO_CALL = 1e-15;
 
+// Número máximo de iterações para o SOLVE_IT
+unsigned MAX_ITERATIONS = 400;
+
 class Matrix {
   public:
     /// Construct a empty (0x0) matrix.
@@ -517,9 +520,8 @@ Matrix gradient_method(
   std::cout << "initial point: " << "(" << x0.x1() << ", " << x0.x2() << ")" << std::endl;
 
   Timer timer;
-  Matrix dk;                  // descida (o gradiente)
   Matrix xk = x0;             // x atual
-  unsigned iter = 0;          // Iteração
+  unsigned iter = 0;          // Iteração atual
   unsigned n_call_armijo = 0; // Número de chamadas de Armijo.
 
   while(true) {
@@ -531,7 +533,7 @@ Matrix gradient_method(
     if ((gradf(xk)).mod() < epsilon) 
       break;
 
-    dk = (-1) * gradf(xk);
+    Matrix dk = (-1) * gradf(xk);     // descida (o gradiente)
 
     // Ordem: s, beta, sigma (o), ...
     double ak = armijo_call(1.0, 0.5, 0.1, f, gradf, xk, dk);
@@ -576,7 +578,6 @@ Matrix newton_method(
   std::cout << "\t" << "with initial point: " << "(" << x0.x1() << ", " << x0.x2() << ")" << std::endl;
 
   Timer timer;
-  Matrix dk;
   Matrix xk = x0;
   unsigned iter = 0;
   unsigned n_call_armijo = 0;
@@ -591,7 +592,7 @@ Matrix newton_method(
     if ((gradf(xk)).mod() < epsilon)
       break;
 
-    dk = (-1) * invhessf(xk) * gradf(xk);
+    Matrix dk = (-1) * invhessf(xk) * gradf(xk);
 
     if (pure)
       ak = 1;
@@ -627,15 +628,71 @@ Matrix newton_method(
 
 /// Método de quasi-newton com atualização de posto 2
 Matrix quasinewton_method(
-    double (*f)(Matrix),
-    Matrix (*gradf)(Matrix),
+    std::function<double(Matrix)> f,
+    std::function<Matrix(Matrix)> gradf,
     Matrix x0,
     Matrix B0,
     double epsilon
     )
 {
-  // TODO.
-  return Matrix();
+  std::cout << "INFO: quasinewton_method run" << std::endl;
+  std::cout << "\t" << "with initial point: " << "(" << x0.x1() << ", " << x0.x2() << ")" << std::endl;
+
+  Timer timer;
+  Matrix xk = x0;
+  Matrix Bk = B0;
+  unsigned iter = 0;
+  unsigned n_call_armijo = 0;
+
+  while(true) {
+    ++iter;
+    std::cout << "-------------------------------------------------------------------" << std::endl;
+    std::cout << "Beginning iteration #" << iter << " of the quasi-newton method:" << std::endl;
+
+    // Critério de parada.
+    if ((gradf(xk)).mod() < epsilon)
+      break;
+
+    Matrix dk = (-1.0) * Bk * (gradf)(xk);
+
+    double ak = armijo_call(1.0, 0.5, 0.1, f, gradf, xk, dk);
+    ++n_call_armijo;
+
+    if ((ak * dk).mod() < 1e-15) {
+      throw std::invalid_argument("WARNING: ak * dk too small. Stopping here, otherwise this would be an infinite loop.");
+    }
+
+    Matrix sk = (-1) * xk;
+    Matrix yk = (-1) * (gradf)(xk);
+
+    // Atualização do xk.
+    xk = xk + ak * dk;
+
+    sk = xk + sk;
+    yk = (gradf)(xk) + yk;
+
+    // Atualiazação de posto 2 (BFGS)
+    Matrix parcela1 = (Bk * sk * sk.t() * Bk) / ((sk.t() * Bk * sk).x());
+    Matrix parcela2 = (yk * yk.t()) / (yk.t() * sk).x();
+    Bk = Bk + (parcela2 - parcela1);
+
+    std::cout << "iter = " << iter << "\tINFO: quasi-newton_method" << std::endl;
+    std::cout << "\t\t" << "dk: " << "(" << dk.x1() << ", " << dk.x2() << ")" << std::endl;
+    std::cout << "\t\t" << "Bk: " << "[" << Bk.get(1,1) << ", " << Bk.get(1,2) << "; " << Bk.get(2,1) << ", " << Bk.get(2,2) << "]" << std::endl;
+    std::cout << "\t\t" << "xk: " << "(" << xk.x1() << ", " << xk.x2() << ")" << std::endl;
+    std::cout << "\t\t" << "f(xk): " << f(xk) << std::endl;
+  }
+
+  std::cout << "Information about this Quasi-Newton method run:" << std::endl;
+  std::cout << "\t" << "elapsed time: " << timer.elapsed() << "s" << std::endl;
+  std::cout << "\t" << "initial point: " << "(" << x0.x1() << ", " << x0.x2() << ")" << std::endl;
+  std::cout << "\t" << "epsilon: " << epsilon << std::endl;
+  std::cout << "\t" << "n_iterations: " << iter + 1 << std::endl;
+  std::cout << "\t" << "n_call_armijo: " << n_call_armijo << std::endl;
+  std::cout << "\t" << "optimal point: " << "(" << xk.x1() << ", " << xk.x2() << ")" << std::endl;
+  std::cout << "\t" << "optimal value: " << f(xk) << std::endl;
+
+  return xk;
 }
 
 /// Função a, Função b ou Função c
@@ -664,6 +721,12 @@ Matrix solve_it(
 
   while(true) {
     ++iter;
+
+    if (iter == MAX_ITERATIONS) {
+      std::cout << "Interrupting this solve_it run. Reason: too many iterations already: #iter = " << iter << std::endl;
+      break;
+    }
+
     std::cout << "**************************************************************" << std::endl;
     std::cout << "Beginning iteration #" << iter << " of solve_it:" << std::endl;
 
@@ -750,7 +813,35 @@ Matrix solve_it(
     }
 
     else if (method == QUASINEWTON) {
-      // TODO
+      switch(function) {
+        case FA:
+          xnext = quasinewton_method(
+              [lambdak,xk](Matrix x) -> double { return g(fa, lambdak, x, xk); },
+              [lambdak,xk](Matrix x) -> Matrix { return gradg(gradfa, lambdak, x, xk); },
+              x0,
+              eye(2),
+              epsilonMeth
+              );
+          break;
+        case FB:
+          xnext = quasinewton_method(
+              [lambdak,xk](Matrix x) -> double { return g(fb, lambdak, x, xk); },
+              [lambdak,xk](Matrix x) -> Matrix { return gradg(gradfb, lambdak, x, xk); },
+              x0,
+              eye(2),
+              epsilonMeth
+              );
+          break;
+        case FC:
+          xnext = quasinewton_method(
+              [lambdak,xk](Matrix x) -> double { return g(fc, lambdak, x, xk); },
+              [lambdak,xk](Matrix x) -> Matrix { return gradg(gradfc, lambdak, x, xk); },
+              x0,
+              eye(2),
+              epsilonMeth
+              );
+          break;
+      }
     }
 
     // Critério de parada 1.
