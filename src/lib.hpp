@@ -489,6 +489,7 @@ double armijo_call(
     )
 {
   std::cout << "\t\t" << "INFO: armijo_call: ";
+  Timer timer;
 
   // Skipping right through the test means 1 iteration.
   // iter = m, só de armijo
@@ -505,6 +506,7 @@ double armijo_call(
     "#iter=" << iter+1 << ", t=" << setprecision(15) << t <<
     setprecision(2) << " \%\% s=" << s << ", beta=" << beta << ", sigma=" << sigma <<
     setprecision(DEFAULT_PRECISION) << std::endl; 
+  std::cout << "\t\t\t" << "elapsed time: " << timer.elapsed() << "s" << std::endl;
   return t;
 }
 
